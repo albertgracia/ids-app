@@ -71,14 +71,39 @@
 - [ ] Add generate_report tool
 - [ ] Test MCP integration with OpenCode
 
-## Phase 11 — IDS-SENSOR-SURICATA-EVE-SAMPLE-CONTRACT-01 ✅
+## Phase 11 — IDS-MCP-READONLY-INTEGRATION-01 ✅
+- [x] MCP read-only tools (7 tools)
+- [x] Tests with mocks (10)
+- [x] Config, client, tools separation
+- **Status:** PASS
+
+## Phase 12 — IDS-CONSOLE-ANALYTICS-INTEGRATION-01 ✅
+- [x] Dashboard integration with analytics-api scoring
+- [x] Event selection, detail panel, score panel
+- [x] CORS middleware in analytics-api
+- **Status:** PASS
+
+## Phase 13 — IDS-SENSOR-SURICATA-EVE-SAMPLE-CONTRACT-01 ✅
 - [x] 9 synthetic EVE JSON samples (alert, flow, dns, http, tls, ssh, rdp, smb, modbus)
 - [x] JSON schema for minimal contract
 - [x] Python validation tests (no real data, all pass)
 - [x] Taskfile integration
 - **Status:** PASS
 
-## Phase 12 — IDS-STAGING-DEPLOY-OBS-SERVER-01 ⬜
+## Phase 14 — IDS-SENSOR-SURICATA-EVE-PARSER-01 ✅
+- [x] Go EVE JSON parser with 9 event types
+- [x] Mapping: event type, severity, protocol, zone, direction
+- [x] 12 tests with synthetic fixtures
+- **Status:** PASS
+
+## Phase 15 — IDS-SENSOR-SURICATA-EVE-INGEST-01 ✅
+- [x] EVEIngestor with JSON and JSON Lines support
+- [x] POST /api/v1/suricata/eve and /eve/batch endpoints
+- [x] All 9 fixtures ingestible, validatable, queryable
+- [x] Capabilities: suricata_eve_parser, suricata_eve_ingest
+- **Status:** PASS
+
+## Phase 16 — IDS-STAGING-DEPLOY-OBS-SERVER-01 ⬜
 - [ ] Full deployment to 192.168.1.40
 - [ ] End-to-end testing on staging
 - [ ] Performance benchmarking

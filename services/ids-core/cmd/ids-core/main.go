@@ -1,6 +1,6 @@
 package main
 
-import (
+	import (
 	"context"
 	"encoding/json"
 	"log"
@@ -13,6 +13,7 @@ import (
 	"github.com/albertgracia/ids-app/services/ids-core/internal/api"
 	"github.com/albertgracia/ids-app/services/ids-core/internal/ingest"
 	"github.com/albertgracia/ids-app/services/ids-core/internal/storage"
+	"github.com/albertgracia/ids-app/services/ids-core/internal/suricata"
 )
 
 type statusResponse struct {
@@ -71,12 +72,17 @@ func main() {
 	simulator := ingest.NewSimulator(nil)
 	handler := api.NewEventHandler(repo, simulator)
 
+	eveIngestor := suricata.NewEVEIngestor(repo)
+	suriHandler := api.NewSuricataHandler(eveIngestor)
+
 	mux := http.NewServeMux()
 	mux.HandleFunc("/healthz", handleHealthz)
 	mux.HandleFunc("/readyz", handleReadyz)
 	mux.HandleFunc("/api/v1/status", handleStatus)
 	mux.HandleFunc("/api/v1/events/recent", handler.HandleRecentEvents)
 	mux.HandleFunc("/api/v1/simulate/events", handler.HandleSimulateEvents)
+	mux.HandleFunc("/api/v1/suricata/eve", suriHandler.HandleEVE)
+	mux.HandleFunc("/api/v1/suricata/eve/batch", suriHandler.HandleEVEBatch)
 
 	server := &http.Server{
 		Addr:    ":" + port,
@@ -127,6 +133,8 @@ func handleStatus(w http.ResponseWriter, r *http.Request) {
 			"event_model",
 			"asset_inventory_model",
 			"simulated_ingest",
+			"suricata_eve_parser",
+			"suricata_eve_ingest",
 		},
 	})
 }
