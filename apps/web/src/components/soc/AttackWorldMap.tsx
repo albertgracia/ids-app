@@ -147,7 +147,8 @@ export default function AttackWorldMap({ events }: Props) {
         </span>
       </div>
       <svg
-        viewBox="0 0 680 320"
+        viewBox="-70 -25 740 350"
+        preserveAspectRatio="xMidYMid meet"
         className="awm-world-svg"
         role="img"
         aria-label="Mapa mundial de amenazas: líneas de ataque desde orígenes sintéticos hacia red interna"
@@ -171,18 +172,18 @@ export default function AttackWorldMap({ events }: Props) {
           </filter>
         </defs>
 
-        {/* Grid lines */}
-        {Array.from({ length: 8 }, (_, i) => (
+        {/* Grid lines — cover full viewBox */}
+        {Array.from({ length: 9 }, (_, i) => (
           <line
             key={`gh${i}`}
-            x1={0} y1={i * 46} x2={680} y2={i * 46}
+            x1={-70} y1={-20 + i * 45} x2={670} y2={-20 + i * 45}
             stroke="#1a2433" strokeWidth={0.5}
           />
         ))}
-        {Array.from({ length: 12 }, (_, i) => (
+        {Array.from({ length: 14 }, (_, i) => (
           <line
             key={`gv${i}`}
-            x1={i * 62} y1={0} x2={i * 62} y2={320}
+            x1={-60 + i * 65} y1={-25} x2={-60 + i * 65} y2={325}
             stroke="#1a2433" strokeWidth={0.5}
           />
         ))}

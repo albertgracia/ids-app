@@ -78,13 +78,15 @@ export default function TopologyGraph({ events }: Props) {
   const COL_W = 130;
   const COL_GAP = 75;
   const NODE_GAP = 16;
-  const PAD_LEFT = 25;
-  const PAD_TOP = 35;
+  const PAD_LEFT = 65;
+  const PAD_RIGHT = 50;
+  const PAD_TOP = 50;
+  const PAD_BOTTOM = 60;
   const MIN_NODE_R = 18;
   const MAX_NODE_R = 28;
 
   const zoneColumns = [...ZONES, "unknown" as const].filter((z) => columns[z]?.length > 0);
-  const svgW = PAD_LEFT + zoneColumns.length * COL_W + Math.max(0, zoneColumns.length - 1) * COL_GAP + 20;
+  const svgW = PAD_LEFT + zoneColumns.length * COL_W + Math.max(0, zoneColumns.length - 1) * COL_GAP + PAD_RIGHT;
 
   let maxColH = 0;
   const colPositions: Record<string, { x: number; nodeYs: Map<string, number> }> = {};
@@ -102,7 +104,7 @@ export default function TopologyGraph({ events }: Props) {
     maxColH = Math.max(maxColH, colH);
   }
 
-  const svgH = maxColH + 50;
+  const svgH = maxColH + PAD_BOTTOM;
 
   return (
     <div className="panel topo-panel">
@@ -114,6 +116,7 @@ export default function TopologyGraph({ events }: Props) {
       </div>
       <svg
         viewBox={`0 0 ${svgW} ${svgH}`}
+        preserveAspectRatio="xMidYMid meet"
         className="topo-svg"
         role="img"
         aria-label="Topolog\u00EDa OT/IT: nodos IP agrupados por zona con enlaces de tr\u00E1fico"
