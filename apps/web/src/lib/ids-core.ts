@@ -1,6 +1,6 @@
 import type { CoreStatus, EventItem, RecentEventsResponse, SimulateEventsResponse, Scenario } from "./types";
 
-const BASE_URL = process.env.NEXT_PUBLIC_IDS_CORE_URL || "http://127.0.0.1:8088";
+const BASE_URL = "/api/core";
 
 async function fetchJSON<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, init);

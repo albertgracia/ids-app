@@ -115,8 +115,8 @@ services:
         condition: service_healthy
     environment:
       IDS_ENV: ${IDS_ENV:-staging}
-      NEXT_PUBLIC_IDS_CORE_URL: http://192.168.1.40:${IDS_CORE_PORT:-8088}
-      NEXT_PUBLIC_ANALYTICS_API_URL: http://192.168.1.40:${IDS_ANALYTICS_PORT:-8090}
+      IDS_CORE_BASE_URL: http://ids-core:${IDS_CORE_PORT:-8088}
+      IDS_ANALYTICS_BASE_URL: http://ids-analytics:${IDS_ANALYTICS_PORT:-8090}
     ports:
       - "${IDS_WEB_PORT:-3002}:3000"
     networks:

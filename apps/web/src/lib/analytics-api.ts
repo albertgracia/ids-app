@@ -1,6 +1,6 @@
 import type { AnalyticsStatus, EventItem, ScoreEventsResponse, ScoreResponse } from "./types";
 
-const BASE_URL = process.env.NEXT_PUBLIC_ANALYTICS_API_URL || "http://127.0.0.1:8090";
+const BASE_URL = "/api/analytics";
 
 async function fetchJSON<T>(url: string, init?: RequestInit): Promise<T> {
   const controller = new AbortController();
