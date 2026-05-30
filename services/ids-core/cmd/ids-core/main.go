@@ -12,6 +12,7 @@ import (
 
 	"github.com/albertgracia/ids-app/services/ids-core/internal/api"
 	"github.com/albertgracia/ids-app/services/ids-core/internal/ingest"
+	"github.com/albertgracia/ids-app/services/ids-core/internal/storage"
 )
 
 type statusResponse struct {
@@ -29,6 +30,7 @@ type serviceStatus struct {
 	Status       string   `json:"status"`
 	Mode         string   `json:"mode"`
 	Version      string   `json:"version"`
+	StorageMode  string   `json:"storage_mode"`
 	Capabilities []string `json:"capabilities"`
 }
 
@@ -38,9 +40,42 @@ func main() {
 		port = "8088"
 	}
 
-	store := ingest.NewEventStore(5000)
-	simulator := ingest.NewSimulator(store)
-	handler := api.NewEventHandler(store, simulator)
+	storageMode := os.Getenv("IDS_STORAGE_MODE")
+	if storageMode == "" {
+		storageMode = "memory"
+	}
+
+	var repo storage.EventRepository
+	ctx := context.Background()
+
+	switch storageMode {
+	case "postgres":
+		databaseURL := os.Getenv("DATABASE_URL")
+		if databaseURL == "" {
+			log.Fatal("DATABASE_URL is required when IDS_STORAGE_MODE=postgres")
+		}
+		pgRepo, err := storage.NewPostgresEventRepository(ctx, databaseURL)
+		if err != nil {
+			log.Fatalf("postgres repository: %v", err)
+		}
+		if err := storage.MigrateEvents(ctx, pgRepo.Pool()); err != nil {
+			log.Fatalf("migration: %v", err)
+		}
+		repo = pgRepo
+		log.Printf("storage mode: postgres (%s)", databaseURL)
+	default:
+		repo = storage.NewMemoryEventRepository(5000)
+		log.Printf("storage mode: memory (max 5000 events)")
+	}
+
+	var easterEgg bool
+	if _, ok := repo.(*storage.PostgresEventRepository); ok {
+		easterEgg = true
+	}
+	_ = easterEgg
+
+	simulator := ingest.NewSimulator(nil)
+	handler := api.NewEventHandler(repo, simulator)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/healthz", handleHealthz)
@@ -66,9 +101,10 @@ func main() {
 	<-quit
 
 	log.Println("shutting down gracefully...")
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	server.Shutdown(ctx)
+	server.Shutdown(shutdownCtx)
+	repo.Close(shutdownCtx)
 }
 
 func handleHealthz(w http.ResponseWriter, r *http.Request) {
@@ -82,12 +118,21 @@ func handleReadyz(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleStatus(w http.ResponseWriter, r *http.Request) {
+	storageMode := os.Getenv("IDS_STORAGE_MODE")
+	if storageMode == "" {
+		storageMode = "memory"
+	}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(serviceStatus{
-		Service:      "ids-core",
-		Status:       "ok",
-		Mode:         "development",
-		Version:      "0.1.0",
-		Capabilities: []string{"event_model", "asset_inventory_model", "simulated_ingest"},
+		Service:     "ids-core",
+		Status:      "ok",
+		Mode:        "development",
+		Version:     "0.1.0",
+		StorageMode: storageMode,
+		Capabilities: []string{
+			"event_model",
+			"asset_inventory_model",
+			"simulated_ingest",
+		},
 	})
 }

@@ -1,21 +1,24 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"strconv"
 	"strings"
 
+	"github.com/albertgracia/ids-app/services/ids-core/internal/domain"
 	"github.com/albertgracia/ids-app/services/ids-core/internal/ingest"
+	"github.com/albertgracia/ids-app/services/ids-core/internal/storage"
 )
 
 type EventHandler struct {
-	store     *ingest.EventStore
+	repo      storage.EventRepository
 	simulator *ingest.Simulator
 }
 
-func NewEventHandler(store *ingest.EventStore, simulator *ingest.Simulator) *EventHandler {
-	return &EventHandler{store: store, simulator: simulator}
+func NewEventHandler(repo storage.EventRepository, simulator *ingest.Simulator) *EventHandler {
+	return &EventHandler{repo: repo, simulator: simulator}
 }
 
 type recentEventsResponse struct {
@@ -43,7 +46,15 @@ func (h *EventHandler) HandleRecentEvents(w http.ResponseWriter, r *http.Request
 		limit = v
 	}
 
-	events := h.store.Recent(limit)
+	events, err := h.repo.Recent(context.Background(), limit)
+	if err != nil {
+		writeJSON(w, 500, map[string]string{"error": err.Error()})
+		return
+	}
+	if events == nil {
+		events = []domain.Event{}
+	}
+
 	items := make([]json.RawMessage, 0, len(events))
 	for _, e := range events {
 		data, _ := json.Marshal(e)
@@ -101,8 +112,12 @@ func (h *EventHandler) HandleSimulateEvents(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
+	ctx := context.Background()
 	for _, e := range events {
-		h.store.Add(e)
+		if err := h.repo.Save(ctx, e); err != nil {
+			writeJSON(w, 500, map[string]string{"error": err.Error()})
+			return
+		}
 	}
 
 	items := make([]json.RawMessage, 0, len(events))
@@ -124,7 +139,6 @@ func writeJSON(w http.ResponseWriter, status int, v interface{}) {
 	json.NewEncoder(w).Encode(v)
 }
 
-// StripPrefix is a helper to strip path prefix for routing.
 func StripPrefix(prefix string, next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		path := strings.TrimPrefix(r.URL.Path, prefix)

@@ -63,6 +63,13 @@ func ParseSeverity(s string) (Severity, error) {
 	return val, nil
 }
 
+func ParseSeveritySafe(s string) Severity {
+	if v, ok := severityValues[s]; ok {
+		return v
+	}
+	return SeverityInfo
+}
+
 func ValidSeverities() []string {
 	names := make([]string, 0, len(severityValues))
 	for _, s := range []Severity{SeverityInfo, SeverityLow, SeverityMedium, SeverityHigh, SeverityCritical} {

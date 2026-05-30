@@ -105,6 +105,13 @@ func ParseProtocol(s string) (Protocol, error) {
 	return val, nil
 }
 
+func ParseProtocolSafe(s string) Protocol {
+	if v, ok := protocolValues[s]; ok {
+		return v
+	}
+	return ProtocolUnknown
+}
+
 func ValidProtocols() []string {
 	names := make([]string, 0, len(protocolValues))
 	for _, p := range []Protocol{

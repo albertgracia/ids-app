@@ -68,3 +68,10 @@ func ParseZone(s string) (Zone, error) {
 	}
 	return val, nil
 }
+
+func ParseZoneSafe(s string) Zone {
+	if v, ok := zoneValues[s]; ok {
+		return v
+	}
+	return ZoneUnknown
+}

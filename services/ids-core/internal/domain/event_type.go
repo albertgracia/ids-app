@@ -74,3 +74,10 @@ func ParseEventType(s string) (EventType, error) {
 	}
 	return val, nil
 }
+
+func ParseEventTypeSafe(s string) EventType {
+	if v, ok := eventTypeValues[s]; ok {
+		return v
+	}
+	return EventTypeNetworkConnection
+}

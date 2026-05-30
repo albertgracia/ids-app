@@ -65,3 +65,10 @@ func ParseDirection(s string) (Direction, error) {
 	}
 	return val, nil
 }
+
+func ParseDirectionSafe(s string) Direction {
+	if v, ok := directionValues[s]; ok {
+		return v
+	}
+	return DirectionUnknown
+}
