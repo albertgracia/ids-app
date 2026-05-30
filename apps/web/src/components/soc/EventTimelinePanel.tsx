@@ -15,6 +15,13 @@ const SEV_COLORS: Record<string, string> = {
   low: "#58a6ff",
   info: "#3a4455",
 };
+const SEV_LABELS: Record<string, string> = {
+  critical: "crítico",
+  high: "alto",
+  medium: "medio",
+  low: "bajo",
+  info: "info",
+};
 
 interface Bucket {
   ts: Date;
@@ -80,17 +87,17 @@ export default function EventTimelinePanel({ events }: Props) {
   return (
     <div className="panel timeline-panel">
       <div className="panel-header">
-        Event Timeline
-        <span className="panel-sub">{buckets.length} buckets · 1 min</span>
+        Línea temporal
+        <span className="panel-sub">{buckets.length} intervalos · 1 min</span>
       </div>
       {buckets.length === 0 ? (
-        <div className="empty-state">No events</div>
+        <div className="empty-state">Sin eventos</div>
       ) : (
         <svg
           viewBox={`0 0 ${svgW} ${svgH}`}
           className="timeline-svg"
           role="img"
-          aria-label="Event timeline with stacked severity bars per 1-minute bucket"
+          aria-label="Línea temporal con barras apiladas por severidad en intervalos de 1 minuto"
         >
           {yTicks.map((val) => {
             const y = PAD_TOP + CHART_H - (val / maxY) * CHART_H;
@@ -139,17 +146,21 @@ export default function EventTimelinePanel({ events }: Props) {
                   rx={0.5}
                 >
                   <title>
-                    {b.label}: {sev} × {count}
+                    {b.label}: {SEV_LABELS[sev]} × {count}
                   </title>
                 </rect>
               );
             }
-            return <g key={`bar-${bi}`}>{els}</g>;
+            return (
+              <g key={`bar-${bi}`} className="tl-bar-group" style={{ animationDelay: `${bi * 15}ms` }}>
+                {els}
+              </g>
+            );
           })}
 
           {buckets
             .filter((_, i) => i % Math.max(1, Math.floor(buckets.length / 8)) === 0)
-            .map((b, _, arr) => {
+            .map((b) => {
               const bi = buckets.indexOf(b);
               if (bi < 0) return null;
               const x = PAD_LEFT + bi * totalBarW + BAR_W / 2;
@@ -178,7 +189,7 @@ export default function EventTimelinePanel({ events }: Props) {
               className="tl-legend-dot"
               style={{ background: SEV_COLORS[sev] }}
             />
-            {sev}
+            {SEV_LABELS[sev]}
           </span>
         ))}
       </div>

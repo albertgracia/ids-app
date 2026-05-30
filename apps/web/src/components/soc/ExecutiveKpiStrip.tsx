@@ -54,48 +54,48 @@ export default function ExecutiveKpiStrip({ events, coreStatus }: Props) {
   return (
     <div className="kpi-strip">
       <KpiCard
-        label="Total Events"
+        label="Total eventos"
         value={total}
         trend={trendRef.current["total"]}
       />
       <KpiCard
-        label="Critical"
+        label="Críticos"
         value={sev.critical}
         color="var(--critical)"
         trend={trendRef.current["critical"]}
       />
       <KpiCard
-        label="High"
+        label="Altos"
         value={sev.high}
         color="var(--high)"
         trend={trendRef.current["high"]}
       />
       <KpiCard
-        label="Medium"
+        label="Medios"
         value={sev.medium}
         color="var(--medium)"
         trend={trendRef.current["medium"]}
       />
       <KpiCard
-        label="OT Events"
+        label="Eventos OT"
         value={ot}
         trend={trendRef.current["ot"]}
       />
       <KpiCard
-        label="IT Events"
+        label="Eventos IT"
         value={it}
         trend={trendRef.current["it"]}
       />
       <KpiCard
-        label="High/Critical"
+        label="Altos/Críticos"
         value={highCrit}
         color="var(--critical)"
         trend={trendRef.current["highCrit"]}
       />
       <KpiCard
-        label="Services"
+        label="Servicios"
         value={svcCount}
-        suffix={coreStatus ? "ok" : "?"}
+        suffix={coreStatus ? "activo" : "?"}
       />
     </div>
   );
@@ -114,6 +114,7 @@ function KpiCard({
   suffix?: string;
   trend?: "up" | "down" | "flat";
 }) {
+  const trendTitle = trend === "up" ? "Incrementando" : trend === "down" ? "Decrementando" : "";
   return (
     <div className="kpi-card">
       <div className="kpi-value-row">
@@ -124,7 +125,7 @@ function KpiCard({
         {trend && trend !== "flat" && (
           <span
             className={`kpi-trend kpi-trend-${trend}`}
-            title={trend === "up" ? "Increasing" : "Decreasing"}
+            title={trendTitle}
           >
             {trend === "up" ? "▲" : "▼"}
           </span>

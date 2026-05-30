@@ -22,9 +22,9 @@ export default function ThreatRadarGrid({ events }: Props) {
     const lateral = events.filter((e) => e.direction === "lateral").length;
 
     return [
-      { label: "Scan", count: scan, color: "#db6d28" },
-      { label: "Auth", count: auth, color: "#d29922" },
-      { label: "Proto", count: proto, color: "#f85149" },
+      { label: "Escaneo", count: scan, color: "#db6d28" },
+      { label: "Autenticación", count: auth, color: "#d29922" },
+      { label: "Protocolo", count: proto, color: "#f85149" },
       { label: "Malware", count: malware, color: "#f85149" },
       { label: "Lateral", count: lateral, color: "#d29922" },
     ];
@@ -40,34 +40,34 @@ export default function ThreatRadarGrid({ events }: Props) {
   const angleStep = (2 * Math.PI) / N;
   const startAngle = -Math.PI / 2;
 
-  const getPoint = (i: number, val: number) => {
-    const angle = startAngle + i * angleStep;
-    const r = (val / maxVal) * outerR;
-    return {
-      x: cx + r * Math.cos(angle),
-      y: cy + r * Math.sin(angle),
-    };
-  };
-
   const polygonPoints = axes
     .map((a, i) => {
-      const pt = getPoint(i, a.count);
-      return `${pt.x},${pt.y}`;
+      const angle = startAngle + i * angleStep;
+      const r = (a.count / maxVal) * outerR;
+      return `${cx + r * Math.cos(angle)},${cy + r * Math.sin(angle)}`;
     })
     .join(" ");
 
   const svgW = 260;
-  const svgH = 290;
+  const svgH = 300;
 
   return (
     <div className="panel radar-panel">
-      <div className="panel-header">Threat Radar</div>
+      <div className="panel-header">Radar de amenazas</div>
       <svg
         viewBox={`0 0 ${svgW} ${svgH}`}
         className="radar-svg"
         role="img"
-        aria-label="Threat radar chart showing 5 attack dimensions"
+        aria-label="Radar de amenazas con 5 dimensiones de ataque"
       >
+        <defs>
+          <radialGradient id="radarSweep" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stopColor="#58a6ff" stopOpacity="0.12" />
+            <stop offset="95%" stopColor="#58a6ff" stopOpacity="0.04" />
+            <stop offset="100%" stopColor="#58a6ff" stopOpacity="0" />
+          </radialGradient>
+        </defs>
+
         {Array.from({ length: gridLevels }, (_, level) => {
           const r = (outerR / gridLevels) * (level + 1);
           const pts = axes
@@ -101,6 +101,15 @@ export default function ThreatRadarGrid({ events }: Props) {
             />
           );
         })}
+
+        {/* Radar sweep effect */}
+        <circle
+          cx={cx}
+          cy={cy}
+          r={outerR}
+          fill="url(#radarSweep)"
+          opacity={0.6}
+        />
 
         <polygon
           points={polygonPoints}
@@ -170,7 +179,7 @@ export default function ThreatRadarGrid({ events }: Props) {
           fontSize={8}
           fontFamily="monospace"
         >
-          max:{maxVal}
+          máx: {maxVal}
         </text>
       </svg>
     </div>
