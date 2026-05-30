@@ -1,9 +1,11 @@
 "use client";
 
-import type { EventItem } from "@/lib/types";
+import { useRef, useEffect } from "react";
+import type { CoreStatus, EventItem } from "@/lib/types";
 
 interface Props {
   events: EventItem[];
+  coreStatus: CoreStatus | null;
 }
 
 function severityCounts(events: EventItem[]) {
@@ -17,28 +19,117 @@ function severityCounts(events: EventItem[]) {
   return { sev, ot, it, total: events.length };
 }
 
-export default function ExecutiveKpiStrip({ events }: Props) {
+export default function ExecutiveKpiStrip({ events, coreStatus }: Props) {
   const { sev, ot, it, total } = severityCounts(events);
   const highCrit = sev.high + sev.critical;
 
+  const prevRef = useRef<Record<string, number>>({});
+  const trendRef = useRef<Record<string, "up" | "down" | "flat">>({});
+
+  useEffect(() => {
+    const current: Record<string, number> = {
+      total,
+      critical: sev.critical,
+      high: sev.high,
+      medium: sev.medium,
+      ot,
+      it,
+      highCrit,
+    };
+    const prev = prevRef.current;
+    const trends: Record<string, "up" | "down" | "flat"> = {};
+    for (const key of Object.keys(current)) {
+      if (prev[key] !== undefined && current[key] !== prev[key]) {
+        trends[key] = current[key] > prev[key] ? "up" : "down";
+      } else {
+        trends[key] = "flat";
+      }
+    }
+    trendRef.current = trends;
+    prevRef.current = current;
+  });
+
+  const svcCount = coreStatus?.capabilities?.length ?? 0;
+
   return (
     <div className="kpi-strip">
-      <KpiCard label="Total Events" value={total} />
-      <KpiCard label="Critical" value={sev.critical} color="var(--critical)" />
-      <KpiCard label="High" value={sev.high} color="var(--high)" />
-      <KpiCard label="Medium" value={sev.medium} color="var(--medium)" />
-      <KpiCard label="OT Events" value={ot} />
-      <KpiCard label="IT Events" value={it} />
-      <KpiCard label="High/Critical" value={highCrit} color="var(--critical)" />
-      <KpiCard label="Services" value={6} suffix="ok" />
+      <KpiCard
+        label="Total Events"
+        value={total}
+        trend={trendRef.current["total"]}
+      />
+      <KpiCard
+        label="Critical"
+        value={sev.critical}
+        color="var(--critical)"
+        trend={trendRef.current["critical"]}
+      />
+      <KpiCard
+        label="High"
+        value={sev.high}
+        color="var(--high)"
+        trend={trendRef.current["high"]}
+      />
+      <KpiCard
+        label="Medium"
+        value={sev.medium}
+        color="var(--medium)"
+        trend={trendRef.current["medium"]}
+      />
+      <KpiCard
+        label="OT Events"
+        value={ot}
+        trend={trendRef.current["ot"]}
+      />
+      <KpiCard
+        label="IT Events"
+        value={it}
+        trend={trendRef.current["it"]}
+      />
+      <KpiCard
+        label="High/Critical"
+        value={highCrit}
+        color="var(--critical)"
+        trend={trendRef.current["highCrit"]}
+      />
+      <KpiCard
+        label="Services"
+        value={svcCount}
+        suffix={coreStatus ? "ok" : "?"}
+      />
     </div>
   );
 }
 
-function KpiCard({ label, value, color, suffix }: { label: string; value: number; color?: string; suffix?: string }) {
+function KpiCard({
+  label,
+  value,
+  color,
+  suffix,
+  trend,
+}: {
+  label: string;
+  value: number;
+  color?: string;
+  suffix?: string;
+  trend?: "up" | "down" | "flat";
+}) {
   return (
     <div className="kpi-card">
-      <div className="kpi-value" style={color ? { color } : undefined}>{value}{suffix ? <small>/{suffix}</small> : null}</div>
+      <div className="kpi-value-row">
+        <span className="kpi-value" style={color ? { color } : undefined}>
+          {value}
+          {suffix ? <small>/{suffix}</small> : null}
+        </span>
+        {trend && trend !== "flat" && (
+          <span
+            className={`kpi-trend kpi-trend-${trend}`}
+            title={trend === "up" ? "Increasing" : "Decreasing"}
+          >
+            {trend === "up" ? "▲" : "▼"}
+          </span>
+        )}
+      </div>
       <div className="kpi-label">{label}</div>
     </div>
   );
