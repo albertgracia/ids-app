@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 
 from ids_analytics.models import (
     BatchScoreRequest,
@@ -11,6 +12,16 @@ from ids_analytics.models import (
 from ids_analytics.scoring import score_event
 
 app = FastAPI(title="Analytics API", version="0.1.0")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://127.0.0.1:3000",
+        "http://localhost:3000",
+    ],
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Content-Type"],
+)
 
 MAX_BATCH = 100
 

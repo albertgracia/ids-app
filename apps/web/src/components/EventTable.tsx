@@ -5,6 +5,8 @@ import type { EventItem } from "@/lib/types";
 interface Props {
   events: EventItem[];
   loading: boolean;
+  onSelectEvent?: (event: EventItem) => void;
+  selectedId?: string | null;
 }
 
 function severityClass(s: string): string {
@@ -17,7 +19,7 @@ function severityClass(s: string): string {
   }
 }
 
-export default function EventTable({ events, loading }: Props) {
+export default function EventTable({ events, loading, onSelectEvent, selectedId }: Props) {
   if (loading) {
     return <div className="section"><p>Loading events...</p></div>;
   }
@@ -47,7 +49,11 @@ export default function EventTable({ events, loading }: Props) {
         </thead>
         <tbody>
           {events.map((e) => (
-            <tr key={e.id}>
+            <tr
+              key={e.id}
+              onClick={() => onSelectEvent?.(e)}
+              style={{ cursor: onSelectEvent ? "pointer" : undefined, background: selectedId === e.id ? "var(--bg)" : undefined }}
+            >
               <td className="cell-mono">{new Date(e.timestamp).toLocaleTimeString()}</td>
               <td><span className={`sev-badge ${severityClass(e.severity)}`}>{e.severity}</span></td>
               <td>{e.type}</td>

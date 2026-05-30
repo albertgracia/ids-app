@@ -1,12 +1,16 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import type { CoreStatus, EventItem } from "@/lib/types";
+import type { AnalyticsStatus, CoreStatus, EventItem } from "@/lib/types";
 import { getStatus, getRecentEvents } from "@/lib/ids-core";
+import { getAnalyticsStatus } from "@/lib/analytics-api";
 import CoreStatusCard from "@/components/CoreStatusCard";
+import AnalyticsStatusCard from "@/components/AnalyticsStatusCard";
 import SeveritySummary from "@/components/SeveritySummary";
 import SimulationPanel from "@/components/SimulationPanel";
 import EventTable from "@/components/EventTable";
+import EventDetailsPanel from "@/components/EventDetailsPanel";
+import EventScorePanel from "@/components/EventScorePanel";
 
 const CORE_URL = process.env.NEXT_PUBLIC_IDS_CORE_URL || "http://127.0.0.1:8088";
 
@@ -17,6 +21,11 @@ export default function Home() {
   const [events, setEvents] = useState<EventItem[]>([]);
   const [eventsLoading, setEventsLoading] = useState(true);
   const [eventsError, setEventsError] = useState<string | null>(null);
+  const [selectedEvent, setSelectedEvent] = useState<EventItem | null>(null);
+
+  const [analyticsStatus, setAnalyticsStatus] = useState<AnalyticsStatus | null>(null);
+  const [analyticsError, setAnalyticsError] = useState<string | null>(null);
+  const [analyticsLoading, setAnalyticsLoading] = useState(true);
 
   const fetchStatus = useCallback(async () => {
     setStatusLoading(true);
@@ -30,6 +39,21 @@ export default function Home() {
       setStatus(null);
     } finally {
       setStatusLoading(false);
+    }
+  }, []);
+
+  const fetchAnalytics = useCallback(async () => {
+    setAnalyticsLoading(true);
+    setAnalyticsError(null);
+    try {
+      const s = await getAnalyticsStatus();
+      setAnalyticsStatus(s);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Connection failed";
+      setAnalyticsError(msg);
+      setAnalyticsStatus(null);
+    } finally {
+      setAnalyticsLoading(false);
     }
   }, []);
 
@@ -49,8 +73,13 @@ export default function Home() {
 
   useEffect(() => {
     fetchStatus();
+    fetchAnalytics();
     fetchEvents();
-  }, [fetchStatus, fetchEvents]);
+  }, [fetchStatus, fetchAnalytics, fetchEvents]);
+
+  const handleSelectEvent = (evt: EventItem) => {
+    setSelectedEvent((prev) => (prev?.id === evt.id ? null : evt));
+  };
 
   return (
     <main className="dashboard">
@@ -67,6 +96,9 @@ export default function Home() {
 
       <CoreStatusCard status={status} error={statusError} loading={statusLoading} />
 
+      <h2 className="section-title">Analytics</h2>
+      <AnalyticsStatusCard status={analyticsStatus} error={analyticsError} loading={analyticsLoading} />
+
       <h2 className="section-title">Event Summary</h2>
       <SeveritySummary events={events} />
 
@@ -81,10 +113,16 @@ export default function Home() {
       </div>
 
       {eventsError && <p className="error-msg">{eventsError}</p>}
-      <EventTable events={events} loading={eventsLoading} />
+      <EventTable events={events} loading={eventsLoading} onSelectEvent={handleSelectEvent} selectedId={selectedEvent?.id ?? null} />
+
+      <h2 className="section-title">Event Details</h2>
+      <EventDetailsPanel event={selectedEvent} />
+
+      <h2 className="section-title">Analytics Scoring</h2>
+      <EventScorePanel event={selectedEvent} />
 
       <footer className="footer">
-        <p>Next: asset inventory, analytics scoring, Suricata EVE JSON ingest.</p>
+        <p>Next: Suricata EVE JSON parser, asset views, staging deploy.</p>
       </footer>
 
       <style jsx global>{`

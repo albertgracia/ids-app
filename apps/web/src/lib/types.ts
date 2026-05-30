@@ -61,3 +61,34 @@ export const SCENARIOS: { value: Scenario; label: string }[] = [
   { value: "protocol_anomaly", label: "Protocol Anomaly" },
   { value: "malware_indicator", label: "Malware Indicator" },
 ];
+
+// Analytics types
+
+export type RiskLevel = "info" | "low" | "medium" | "high" | "critical";
+
+export interface AnalyticsStatus {
+  service: string;
+  status: string;
+  mode: string;
+  version: string;
+  capabilities: string[];
+}
+
+export interface ScoreFactor {
+  name: string;
+  impact: number;
+  reason: string;
+}
+
+export interface ScoreResponse {
+  event_id: string;
+  score: number;
+  risk_level: RiskLevel;
+  factors: ScoreFactor[];
+  recommendations: string[];
+}
+
+export interface ScoreEventsResponse {
+  items: ScoreResponse[];
+  count: number;
+}
