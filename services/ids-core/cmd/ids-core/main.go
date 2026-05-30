@@ -68,12 +68,6 @@ func main() {
 		log.Printf("storage mode: memory (max 5000 events)")
 	}
 
-	var easterEgg bool
-	if _, ok := repo.(*storage.PostgresEventRepository); ok {
-		easterEgg = true
-	}
-	_ = easterEgg
-
 	simulator := ingest.NewSimulator(nil)
 	handler := api.NewEventHandler(repo, simulator)
 
@@ -86,7 +80,7 @@ func main() {
 
 	server := &http.Server{
 		Addr:    ":" + port,
-		Handler: mux,
+		Handler: api.CORSMiddleware(mux),
 	}
 
 	go func() {

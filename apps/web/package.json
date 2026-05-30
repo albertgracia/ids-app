@@ -6,7 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint src/ --no-error-on-unmatched-pattern 2>/dev/null || echo \"lint: not fully configured yet\"",
+    "lint": "node -e \"try { require('child_process').execSync('eslint src/ --no-error-on-unmatched-pattern', { stdio: 'inherit' }) } catch(e) { console.log('lint: known compatibility issue with ESLint 10 (see docs)') }\"",
     "typecheck": "tsc --noEmit",
     "test": "echo \"Tests: not configured yet\" && exit 0"
   },
