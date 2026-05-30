@@ -1,38 +1,30 @@
 "use client";
 
-import { useRef, useEffect, useMemo, useState } from "react";
+import { useRef, useEffect } from "react";
 import type { CoreStatus, EventItem } from "@/lib/types";
-import { L } from "@/lib/soc-labels";
 
 interface Props {
   events: EventItem[];
   coreStatus: CoreStatus | null;
-  vertical?: boolean;
 }
 
 function severityCounts(events: EventItem[]) {
   const sev: Record<string, number> = { critical: 0, high: 0, medium: 0, low: 0, info: 0 };
-  let ot = 0,
-    it = 0;
+  let ot = 0, it = 0;
   for (const e of events) {
     sev[e.severity] = (sev[e.severity] || 0) + 1;
     if (e.zone === "ot") ot++;
     else if (e.zone === "it") it++;
   }
-  const total = events.length;
-  const riskScore = total > 0
-    ? Math.min(100, Math.round(
-        ((sev.critical * 25 + sev.high * 15 + sev.medium * 8 + sev.low * 2) / total) * 5
-      ))
-    : 0;
-  return { sev, ot, it, total, riskScore };
+  return { sev, ot, it, total: events.length };
 }
 
-export default function ExecutiveKpiStrip({ events, coreStatus, vertical }: Props) {
-  const { sev, ot, it, total, riskScore } = severityCounts(events);
+export default function ExecutiveKpiStrip({ events, coreStatus }: Props) {
+  const { sev, ot, it, total } = severityCounts(events);
+  const highCrit = sev.high + sev.critical;
 
   const prevRef = useRef<Record<string, number>>({});
-  const [flashKeys, setFlashKeys] = useState<Set<string>>(new Set());
+  const trendRef = useRef<Record<string, "up" | "down" | "flat">>({});
 
   useEffect(() => {
     const current: Record<string, number> = {
@@ -42,61 +34,69 @@ export default function ExecutiveKpiStrip({ events, coreStatus, vertical }: Prop
       medium: sev.medium,
       ot,
       it,
-      riskScore,
+      highCrit,
     };
     const prev = prevRef.current;
-    const flashed = new Set<string>();
-
+    const trends: Record<string, "up" | "down" | "flat"> = {};
     for (const key of Object.keys(current)) {
-      if (prev[key] !== undefined && current[key] > prev[key]) {
-        flashed.add(key);
+      if (prev[key] !== undefined && current[key] !== prev[key]) {
+        trends[key] = current[key] > prev[key] ? "up" : "down";
+      } else {
+        trends[key] = "flat";
       }
     }
-
+    trendRef.current = trends;
     prevRef.current = current;
-
-    if (flashed.size > 0) {
-      setFlashKeys(flashed);
-      const t = setTimeout(() => setFlashKeys(new Set()), 1600);
-      return () => clearTimeout(t);
-    }
   });
 
-  const riskTrend =
-    riskScore >= 70 ? "ALTO" : riskScore >= 40 ? "MED" : "BAJO";
-  const riskColor =
-    riskScore >= 70
-      ? "var(--critical)"
-      : riskScore >= 40
-        ? "var(--high)"
-        : riskScore >= 20
-          ? "var(--medium)"
-          : "var(--ok)";
-
-  const cards = [
-    { key: "total", label: L.kpi.totalEvents, value: total, color: undefined, trend: undefined },
-    { key: "critical", label: L.kpi.critical, value: sev.critical, color: "var(--critical)", trend: undefined },
-    { key: "high", label: L.kpi.high, value: sev.high, color: "var(--high)", trend: undefined },
-    { key: "medium", label: L.kpi.medium, value: sev.medium, color: "var(--medium)", trend: undefined },
-    { key: "ot", label: L.kpi.otEvents, value: ot, color: undefined, trend: undefined },
-    { key: "it", label: L.kpi.itEvents, value: it, color: undefined, trend: undefined },
-    { key: "riskScore", label: L.kpi.riskScore, value: riskScore, color: riskColor, trend: riskTrend },
-  ];
-
-  const containerClass = vertical ? "kpi-sidebar" : "kpi-strip";
+  const svcCount = coreStatus?.capabilities?.length ?? 0;
 
   return (
-    <div className={containerClass}>
-      {cards.map((c) => (
-        <KpiCard
-          key={c.key}
-          label={c.label}
-          value={c.value}
-          color={c.color}
-          trend={c.trend}
-          flashing={flashKeys.has(c.key)}
-        />
-      ))}
+    <div className="kpi-strip">
+      <KpiCard
+        label="Total Events"
+        value={total}
+        trend={trendRef.current["total"]}
+      />
+      <KpiCard
+        label="Critical"
+        value={sev.critical}
+        color="var(--critical)"
+        trend={trendRef.current["critical"]}
+      />
+      <KpiCard
+        label="High"
+        value={sev.high}
+        color="var(--high)"
+        trend={trendRef.current["high"]}
+      />
+      <KpiCard
+        label="Medium"
+        value={sev.medium}
+        color="var(--medium)"
+        trend={trendRef.current["medium"]}
+      />
+      <KpiCard
+        label="OT Events"
+        value={ot}
+        trend={trendRef.current["ot"]}
+      />
+      <KpiCard
+        label="IT Events"
+        value={it}
+        trend={trendRef.current["it"]}
+      />
+      <KpiCard
+        label="High/Critical"
+        value={highCrit}
+        color="var(--critical)"
+        trend={trendRef.current["highCrit"]}
+      />
+      <KpiCard
+        label="Services"
+        value={svcCount}
+        suffix={coreStatus ? "ok" : "?"}
+      />
     </div>
   );
 }
@@ -105,32 +105,30 @@ function KpiCard({
   label,
   value,
   color,
+  suffix,
   trend,
-  flashing,
 }: {
   label: string;
   value: number;
   color?: string;
-  trend?: string;
-  flashing?: boolean;
+  suffix?: string;
+  trend?: "up" | "down" | "flat";
 }) {
-  const isCritical = color === "var(--critical)";
-  const flashClass = flashing
-    ? isCritical
-      ? "flash-critical"
-      : "flash-high"
-    : "";
-
   return (
-    <div className={`kpi-card ${flashClass}`}>
+    <div className="kpi-card">
       <div className="kpi-value-row">
-        <span
-          className={`kpi-value ${isCritical ? "kpi-critical" : ""}`}
-          style={color && !isCritical ? { color } : undefined}
-        >
+        <span className="kpi-value" style={color ? { color } : undefined}>
           {value}
-          {trend ? <small> {trend}</small> : null}
+          {suffix ? <small>/{suffix}</small> : null}
         </span>
+        {trend && trend !== "flat" && (
+          <span
+            className={`kpi-trend kpi-trend-${trend}`}
+            title={trend === "up" ? "Increasing" : "Decreasing"}
+          >
+            {trend === "up" ? "▲" : "▼"}
+          </span>
+        )}
       </div>
       <div className="kpi-label">{label}</div>
     </div>
