@@ -22,7 +22,7 @@ tasks:
         ignore_error: true
       - cmd: cd {{.MCP_DIR}} && uv sync
         ignore_error: true
-      - cmd: echo "Go dependencies: cd {{.CORE_DIR}} && go mod tidy"
+      - cmd: echo "Run 'cd services/ids-core && go mod tidy' to sync Go deps"
         ignore_error: true
 
   dev:web:
