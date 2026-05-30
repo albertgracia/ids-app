@@ -1,14 +1,16 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState, useCallback } from "react";
 import type { EventItem } from "@/lib/types";
+import type { ThreatGeoPoint } from "@/lib/geoip-synthetic";
+import { buildThreatPoints, lookupSyntheticGeo } from "@/lib/geoip-synthetic";
 import { L } from "@/lib/soc-labels";
 
 interface Props {
   events: EventItem[];
 }
 
-// Simplified continent SVG paths (same as design-lab mock)
+// Simplified continent SVG paths
 const continents = [
   { d: "M 25,20 L 80,15 L 130,25 L 170,30 L 210,35 L 230,50 L 225,70 L 200,90 L 175,110 L 155,115 L 130,95 L 100,80 L 65,65 L 40,55 Z", label: "NA" },
   { d: "M 160,130 L 185,125 L 210,135 L 220,155 L 215,185 L 200,215 L 185,240 L 165,250 L 145,235 L 135,200 L 140,165 L 150,145 Z", label: "SA" },
@@ -26,269 +28,278 @@ const SEV_COLORS: Record<string, string> = {
   info: "#6e7b8c",
 };
 
-// Deterministic synthetic GeoIP: map IP → (x, y, countryCode)
-function syntheticGeoIP(ip: string): { x: number; y: number; country: string } {
-  const parts = ip.split(".");
-  if (parts.length !== 4) return { x: 300, y: 20, country: "??" };
+// ─── SVG viewBox and projection ──────────────────────────────────────
 
-  // Use first two octets to deterministically pick a "country"
-  const a = parseInt(parts[0], 10);
-  const b = parseInt(parts[1], 10);
-  const hash = (a * 256 + b) % 7;
+const VB_X = -70;
+const VB_Y = -25;
+const VB_W = 740;
+const VB_H = 350;
 
-  const positions = [
-    { x: 520, y: 32, country: "CN" },
-    { x: 330, y: 50, country: "NL" },
-    { x: 280, y: 180, country: "BR" },
-    { x: 460, y: 65, country: "IN" },
-    { x: 220, y: 75, country: "US" },
-    { x: 480, y: 215, country: "AU" },
-    { x: 265, y: 108, country: "NG" },
-  ];
-
-  return positions[hash % positions.length];
+/** Equirectangular projection: lat/lon → SVG x/y */
+function latLonToSvg(lat: number, lon: number): [number, number] {
+  const x = ((lon + 180) / 360) * VB_W + VB_X;
+  const y = ((90 - lat) / 180) * VB_H + VB_Y;
+  return [x, y];
 }
 
-interface AttackLine {
-  id: string;
-  x1: number;
-  y1: number;
-  x2: number;
-  y2: number;
-  sev: string;
-  label: string;
+/** Target marker for "red interna" */
+const TARGET_X = 180;
+const TARGET_Y = 155;
+
+// ─── Defensive action buttons (disabled) ────────────────────────────
+
+const DEFENSIVE_ACTIONS = [
+  { id: "copy-ioc", label: "Copiar IOC", icon: "📋" },
+  { id: "mark-reviewed", label: "Marcar revisión", icon: "✅" },
+  { id: "block-suggest", label: "Recomendar bloqueo", icon: "🚫" },
+  { id: "watchlist", label: "Añadir vigilancia", icon: "👁" },
+];
+
+// ─── Tooltip state ───────────────────────────────────────────────────
+
+interface TooltipData {
+  ip: string;
   country: string;
+  severity: string;
+  count: number;
 }
 
-// Threat type → short label
-function attackLabel(type: string): string {
-  switch (type) {
-    case "scan_detected": return "Escaneo";
-    case "auth_failure": return "Brute SSH";
-    case "malware_indicator": return "C2 Beacon";
-    case "protocol_anomaly": return "Anomalía";
-    case "ot_modbus_read": return "Modbus";
-    case "ot_s7_command": return "S7 Cmd";
-    default: return type.replace(/_/g, " ");
-  }
-}
+// ─── Component ───────────────────────────────────────────────────────
 
 export default function AttackWorldMap({ events }: Props) {
-  const threatCount = useMemo(() => {
-    return events.filter((e) => {
-      const ip = e.source.ip;
-      const oct1 = parseInt(ip.split(".")[0], 10);
-      const oct2 = parseInt(ip.split(".")[1], 10);
-      if (oct1 === 10) return false;
-      if (oct1 === 172 && oct2 >= 16 && oct2 <= 31) return false;
-      if (oct1 === 192 && oct2 === 168) return false;
-      return true;
-    }).length;
-  }, [events]);
+  const [tooltip, setTooltip] = useState<{ data: TooltipData; x: number; y: number } | null>(null);
 
-  const attackLines = useMemo((): AttackLine[] => {
-    // Target: "RED INTERNA" at center of map
-    const targetX = 180;
-    const targetY = 155;
-
-    // Only use inbound / lateral events with external-looking source IPs
-    // 10.x, 172.16-31.x, 192.168.x = private (internal), others = external
-    const external = events.filter((e) => {
-      const ip = e.source.ip;
-      const oct1 = parseInt(ip.split(".")[0], 10);
-      const oct2 = parseInt(ip.split(".")[1], 10);
-      // Class A private: 10.x.x.x
-      if (oct1 === 10) return false;
-      // Class B private: 172.16-31.x.x
-      if (oct1 === 172 && oct2 >= 16 && oct2 <= 31) return false;
-      // Class C private: 192.168.x.x
-      if (oct1 === 192 && oct2 === 168) return false;
-      return true;
-    });
-
-    // Deduplicate by source IP, keeping highest severity
-    const byIP = new Map<string, EventItem>();
-    const sevOrder = ["critical", "high", "medium", "low", "info"];
-    for (const e of external) {
-      const existing = byIP.get(e.source.ip);
-      if (!existing || sevOrder.indexOf(e.severity) < sevOrder.indexOf(existing.severity)) {
-        byIP.set(e.source.ip, e);
-      }
-    }
-
-    const lines: AttackLine[] = [];
-    let idx = 0;
-    for (const e of byIP.values()) {
-      const geo = syntheticGeoIP(e.source.ip);
-      lines.push({
-        id: `al-${idx++}`,
-        x1: geo.x,
-        y1: geo.y,
-        x2: targetX,
-        y2: targetY,
-        sev: e.severity,
-        label: attackLabel(e.type),
-        country: geo.country,
+  const handlePointerEnter = useCallback(
+    (tp: ThreatGeoPoint) => (e: React.PointerEvent<SVGCircleElement>) => {
+      const svg = (e.target as SVGCircleElement).closest("svg");
+      if (!svg) return;
+      const rect = svg.getBoundingClientRect();
+      setTooltip({
+        data: {
+          ip: tp.ip,
+          country: tp.country_code,
+          severity: tp.severity_max,
+          count: tp.event_count,
+        },
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top,
       });
-    }
-    return lines.slice(0, 12); // max 12 lines for visual clarity
-  }, [events]);
+    },
+    [],
+  );
 
-  const uniqueSevs = [...new Set(attackLines.map((a) => a.sev))];
+  const handlePointerLeave = useCallback(() => setTooltip(null), []);
+
+  // ── Aggregate threat points ─────────────────────────────────────
+
+  const threatPoints = useMemo(() => buildThreatPoints(events), [events]);
+
+  // Count external threats (for header subtitle)
+  const externalCount = useMemo(
+    () => events.filter((e) => {
+      const geo = lookupSyntheticGeo(e.source.ip);
+      return geo && (geo.is_external || geo.is_documentation_ip);
+    }).length,
+    [events],
+  );
+
+  const uniqueSevs = [...new Set(threatPoints.map((t) => t.severity_max))];
 
   return (
     <div className="panel awm-panel">
+      {/* ─── Header ─── */}
       <div className="panel-header">
-        <span>{L.panels.attackMap}</span>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
+          <span>{L.panels.attackMap}</span>
+          <span
+            className="awm-confidence-badge"
+            title="GeoIP sintético de staging — sin proveedor externo"
+          >
+            SYNTHETIC
+          </span>
+        </div>
         <span className="panel-sub">
-          {threatCount > 0
-            ? `${attackLines.length} ${attackLines.length === 1 ? "amenaza activa" : "amenazas activas"}`
-            : "Sin amenazas entrantes"}
+          {threatPoints.length > 0
+            ? `${threatPoints.length} ${threatPoints.length === 1 ? "origen activo" : "orígenes activos"} — ${externalCount} eventos`
+            : "Sin amenazas externas"}
         </span>
       </div>
-      <svg
-        viewBox="-70 -25 740 350"
-        preserveAspectRatio="xMidYMid meet"
-        className="awm-world-svg"
-        role="img"
-        aria-label="Mapa mundial de amenazas: líneas de ataque desde orígenes sintéticos hacia red interna"
-        style={{ display: "block" }}
-      >
-        <defs>
-          <filter id="awm-glow">
-            <feGaussianBlur stdDeviation="2.5" result="blur" />
-            <feMerge>
-              <feMergeNode in="blur" />
-              <feMergeNode in="SourceGraphic" />
-            </feMerge>
-          </filter>
-          <filter id="awm-glow-strong">
-            <feGaussianBlur stdDeviation="4" result="blur" />
-            <feMerge>
-              <feMergeNode in="blur" />
-              <feMergeNode in="blur" />
-              <feMergeNode in="SourceGraphic" />
-            </feMerge>
-          </filter>
-        </defs>
 
-        {/* Grid lines — cover full viewBox */}
-        {Array.from({ length: 9 }, (_, i) => (
-          <line
-            key={`gh${i}`}
-            x1={-70} y1={-20 + i * 45} x2={670} y2={-20 + i * 45}
-            stroke="#1a2433" strokeWidth={0.5}
-          />
-        ))}
-        {Array.from({ length: 14 }, (_, i) => (
-          <line
-            key={`gv${i}`}
-            x1={-60 + i * 65} y1={-25} x2={-60 + i * 65} y2={325}
-            stroke="#1a2433" strokeWidth={0.5}
-          />
-        ))}
-
-        {/* Continents */}
-        {continents.map((c) => (
-          <path
-            key={c.label}
-            d={c.d}
-            fill="#151d2a"
-            stroke="#1e2a3a"
-            strokeWidth={0.8}
-          />
-        ))}
-
-        {/* Internal network target marker */}
-        <circle
-          cx={180} cy={155} r={18}
-          fill="none"
-          stroke="var(--accent)"
-          strokeWidth={2}
-          strokeDasharray="4 3"
-          opacity={0.7}
+      {/* ─── SVG Map ─── */}
+      <div style={{ position: "relative" }}>
+        <svg
+          viewBox="-70 -25 740 350"
+          preserveAspectRatio="xMidYMid meet"
+          className="awm-world-svg"
+          role="img"
+          aria-label="Mapa mundial de amenazas: puntos y líneas desde orígenes sintéticos hacia red interna"
+          style={{ display: "block" }}
         >
-          <animateTransform
-            attributeName="transform"
-            type="rotate"
-            from="0 180 155"
-            to="360 180 155"
-            dur="20s"
-            repeatCount="indefinite"
-          />
-        </circle>
-        <circle cx={180} cy={155} r={6} fill="var(--accent)" filter="url(#awm-glow-strong)" />
-        <text x={180} y={185} textAnchor="middle" fill="var(--accent)" fontSize="9" fontWeight={700} fontFamily="monospace">
-          RED INTERNA
-        </text>
+          <defs>
+            <filter id="awm-glow">
+              <feGaussianBlur stdDeviation="2.5" result="blur" />
+              <feMerge>
+                <feMergeNode in="blur" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
+            <filter id="awm-glow-strong">
+              <feGaussianBlur stdDeviation="4" result="blur" />
+              <feMerge>
+                <feMergeNode in="blur" />
+                <feMergeNode in="blur" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
+          </defs>
 
-        {/* Attack lines from real event data */}
-        {attackLines.map((a) => {
-          const cx = (a.x1 + a.x2) / 2;
-          const cy = Math.min(a.y1, a.y2) - 38;
-          const c = SEV_COLORS[a.sev] || "#6e7b8c";
-          return (
-            <g key={a.id}>
-              {/* Glow underlay */}
-              <path
-                d={`M ${a.x1},${a.y1} Q ${cx},${cy} ${a.x2},${a.y2}`}
-                fill="none" stroke={c} strokeWidth={4}
-                opacity={0.18} filter="url(#awm-glow)"
-              />
-              {/* Curved line */}
-              <path
-                d={`M ${a.x1},${a.y1} Q ${cx},${cy} ${a.x2},${a.y2}`}
-                fill="none" stroke={c} strokeWidth={2}
-                strokeDasharray="8 5" opacity={0.85}
-                className="attack-line-flow" filter="url(#awm-glow)"
-              />
-              {/* Source dot */}
-              <circle cx={a.x1} cy={a.y1} r={5.5} fill={c} opacity={0.95} filter="url(#awm-glow)">
-                <animate attributeName="r" values="4;6;4" dur="2s" repeatCount="indefinite" />
-                <animate attributeName="opacity" values="0.7;1;0.7" dur="2s" repeatCount="indefinite" />
-              </circle>
-              {/* Data packet traveling */}
-              <circle r={3} fill={c} opacity={0.95} className="attack-dot" filter="url(#awm-glow)">
-                <animateMotion
-                  dur="3s" repeatCount="indefinite"
-                  path={`M ${a.x1},${a.y1} Q ${cx},${cy} ${a.x2},${a.y2}`}
-                />
-              </circle>
-              {/* Country label near source */}
-              <rect
-                x={a.x1 - 12} y={a.y1 - 22} width={24} height={11}
-                rx={2} fill="rgba(10,14,20,0.75)"
-              />
-              <text
-                x={a.x1} y={a.y1 - 14} textAnchor="middle" fill={c}
-                fontSize="8" fontFamily="monospace" fontWeight={700} opacity={0.95}
-              >
-                {a.country}
-              </text>
-              {/* Attack label on curve */}
-              <rect
-                x={cx - 28} y={cy - 14} width={56} height={12}
-                rx={2} fill="rgba(10,14,20,0.75)"
-              />
-              <text
-                x={cx} y={cy - 4} textAnchor="middle" fill={c}
-                fontSize="7" fontFamily="monospace" fontWeight={600} opacity={0.9}
-              >
-                {a.label}
-              </text>
-            </g>
-          );
-        })}
+          {/* Grid lines */}
+          {Array.from({ length: 9 }, (_, i) => (
+            <line
+              key={`gh${i}`}
+              x1={-70} y1={-20 + i * 45} x2={670} y2={-20 + i * 45}
+              stroke="#1a2433" strokeWidth={0.5}
+            />
+          ))}
+          {Array.from({ length: 14 }, (_, i) => (
+            <line
+              key={`gv${i}`}
+              x1={-60 + i * 65} y1={-25} x2={-60 + i * 65} y2={325}
+              stroke="#1a2433" strokeWidth={0.5}
+            />
+          ))}
 
-        {/* No data fallback */}
-        {attackLines.length === 0 && (
-          <text x={340} y={210} textAnchor="middle" fill="#6e7b8c" fontSize="11" fontFamily="monospace">
-            Sin eventos externos recientes
+          {/* Continents */}
+          {continents.map((c) => (
+            <path
+              key={c.label}
+              d={c.d}
+              fill="#151d2a"
+              stroke="#1e2a3a"
+              strokeWidth={0.8}
+            />
+          ))}
+
+          {/* Internal network target marker */}
+          <circle
+            cx={TARGET_X} cy={TARGET_Y} r={18}
+            fill="none"
+            stroke="var(--accent)"
+            strokeWidth={2}
+            strokeDasharray="4 3"
+            opacity={0.7}
+          >
+            <animateTransform
+              attributeName="transform"
+              type="rotate"
+              from="0 180 155"
+              to="360 180 155"
+              dur="20s"
+              repeatCount="indefinite"
+            />
+          </circle>
+          <circle cx={TARGET_X} cy={TARGET_Y} r={6} fill="var(--accent)" filter="url(#awm-glow-strong)" />
+          <text x={TARGET_X} y={TARGET_Y + 30} textAnchor="middle" fill="var(--accent)" fontSize="9" fontWeight={700} fontFamily="monospace">
+            RED INTERNA
           </text>
-        )}
-      </svg>
 
-      {/* Legend */}
+          {/* ── Threat lines + dots from geoip-synthetic ── */}
+          {threatPoints.map((tp, idx) => {
+            const [x1, y1] = latLonToSvg(tp.latitude, tp.longitude);
+            // Curved line control point (above the line)
+            const cx = (x1 + TARGET_X) / 2;
+            const cy = Math.min(y1, TARGET_Y) - 38;
+            const color = SEV_COLORS[tp.severity_max] || "#6e7b8c";
+            const radius = Math.min(4 + tp.event_count * 1.2, 10);
+
+            return (
+              <g key={`tp-${idx}`}>
+                {/* Glow underlay */}
+                <path
+                  d={`M ${x1},${y1} Q ${cx},${cy} ${TARGET_X},${TARGET_Y}`}
+                  fill="none" stroke={color} strokeWidth={4}
+                  opacity={0.18} filter="url(#awm-glow)"
+                />
+                {/* Curved attack line */}
+                <path
+                  d={`M ${x1},${y1} Q ${cx},${cy} ${TARGET_X},${TARGET_Y}`}
+                  fill="none" stroke={color} strokeWidth={2}
+                  strokeDasharray="8 5" opacity={0.85}
+                  className="attack-line-flow" filter="url(#awm-glow)"
+                />
+                {/* Animated data packet */}
+                <circle r={3} fill={color} opacity={0.95} className="attack-dot" filter="url(#awm-glow)">
+                  <animateMotion
+                    dur="3s" repeatCount="indefinite"
+                    path={`M ${x1},${y1} Q ${cx},${cy} ${TARGET_X},${TARGET_Y}`}
+                  />
+                </circle>
+                {/* Threat point dot (with tooltip) */}
+                <circle
+                  cx={x1} cy={y1} r={radius}
+                  fill={color} opacity={0.95}
+                  filter="url(#awm-glow)"
+                  onPointerEnter={handlePointerEnter(tp)}
+                  onPointerMove={handlePointerEnter(tp)}
+                  onPointerLeave={handlePointerLeave}
+                  style={{ cursor: "pointer" }}
+                >
+                  <animate attributeName="r" values={`${radius - 1};${radius + 1};${radius - 1}`} dur="2s" repeatCount="indefinite" />
+                  <animate attributeName="opacity" values="0.7;1;0.7" dur="2s" repeatCount="indefinite" />
+                </circle>
+                {/* Country label near source */}
+                <rect
+                  x={x1 - 14} y={y1 - 24} width={28} height={12}
+                  rx={2} fill="rgba(10,14,20,0.8)"
+                />
+                <text
+                  x={x1} y={y1 - 15} textAnchor="middle" fill={color}
+                  fontSize="8" fontFamily="monospace" fontWeight={700} opacity={0.95}
+                >
+                  {tp.country_code}
+                </text>
+              </g>
+            );
+          })}
+
+          {/* No data fallback */}
+          {threatPoints.length === 0 && (
+            <text x={340} y={210} textAnchor="middle" fill="#6e7b8c" fontSize="11" fontFamily="monospace">
+              Sin eventos externos recientes
+            </text>
+          )}
+        </svg>
+
+        {/* ── Tooltip overlay ── */}
+        {tooltip && (
+          <div
+            className="awm-tooltip"
+            style={{
+              left: tooltip.x + 16,
+              top: tooltip.y - 10,
+            }}
+          >
+            <div className="awm-tooltip-row">
+              <span className="awm-tooltip-label">IP</span>
+              <span className="awm-tooltip-val">{tooltip.data.ip}</span>
+            </div>
+            <div className="awm-tooltip-row">
+              <span className="awm-tooltip-label">País</span>
+              <span className="awm-tooltip-val">{tooltip.data.country}</span>
+            </div>
+            <div className="awm-tooltip-row">
+              <span className="awm-tooltip-label">Severidad</span>
+              <span className="awm-tooltip-val">{tooltip.data.severity}</span>
+            </div>
+            <div className="awm-tooltip-row">
+              <span className="awm-tooltip-label">Eventos</span>
+              <span className="awm-tooltip-val">{tooltip.data.count}</span>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ── Legend ── */}
       <div className="timeline-legend" style={{ marginTop: 5 }}>
         {(["critical", "high", "medium", "low"] as const).map((s) => (
           <span key={s} className="tl-legend-item" style={{ fontSize: 10 }}>
@@ -299,6 +310,22 @@ export default function AttackWorldMap({ events }: Props) {
       </div>
       <div className="map-geoip-legend">
         GeoIP sintético de staging — sin proveedor externo
+      </div>
+
+      {/* ── Defensive action buttons ── */}
+      <div className="awm-defensive-bar">
+        <span className="awm-defensive-label">Acciones defensivas</span>
+        {DEFENSIVE_ACTIONS.map((a) => (
+          <button
+            key={a.id}
+            className="awm-defensive-btn"
+            disabled
+            title="Pendiente backend"
+          >
+            <span className="awm-defensive-icon">{a.icon}</span>
+            {a.label}
+          </button>
+        ))}
       </div>
     </div>
   );
