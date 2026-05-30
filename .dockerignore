@@ -1,0 +1,59 @@
+# Git
+.git
+
+# Dependencies
+node_modules/
+.next/
+.venv/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+*.pyc
+
+# Build outputs
+dist/
+build/
+coverage/
+*.out
+
+# Go
+vendor/
+
+# Logs
+*.log
+logs/
+
+# Databases
+*.db
+*.sqlite
+*.sqlite3
+
+# Network captures
+*.pcap
+*.pcapng
+captures/
+
+# Data
+data/
+tmp/
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Archives
+*.rar
+*.zip
+
+# Docker
+.docker/

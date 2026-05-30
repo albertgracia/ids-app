@@ -83,12 +83,23 @@ def run_stdin() -> None:
 
 def main() -> None:
     port = int(config.IDS_CORE_BASE_URL.split(":")[-1]) + 3 if ":" in config.IDS_CORE_BASE_URL else 8091
-    http_port = port
 
-    http_thread = threading.Thread(target=uvicorn.run, args=(http_app,), kwargs={"host": "127.0.0.1", "port": http_port, "log_level": "info"}, daemon=True)
+    import uvicorn.server  # noqa: ensure loaded in thread
+    http_thread = threading.Thread(
+        target=uvicorn.run,
+        args=(http_app,),
+        kwargs={"host": "0.0.0.0", "port": port, "log_level": "info"},
+        daemon=True,
+    )
     http_thread.start()
 
-    run_stdin()
+    # Block main thread — keep process alive
+    try:
+        while True:
+            import time
+            time.sleep(3600)
+    except KeyboardInterrupt:
+        pass
 
 
 if __name__ == "__main__":

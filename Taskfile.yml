@@ -113,6 +113,30 @@ tasks:
       - task: test
       - task: validate:suricata-contract
 
+  docker:build:core:
+    desc: Build ids-core Docker image
+    cmd: docker build -f services/ids-core/Dockerfile -t ids-app/ids-core:local .
+
+  docker:build:analytics:
+    desc: Build analytics-api Docker image
+    cmd: docker build -f services/analytics-api/Dockerfile -t ids-app/ids-analytics:local .
+
+  docker:build:mcp:
+    desc: Build mcp-server Docker image
+    cmd: docker build -f services/mcp-server/Dockerfile -t ids-app/ids-mcp:local .
+
+  docker:build:web:
+    desc: Build ids-web Docker image
+    cmd: docker build -f apps/web/Dockerfile -t ids-app/ids-web:local .
+
+  docker:build:all:
+    desc: Build all Docker images
+    cmds:
+      - task: docker:build:core
+      - task: docker:build:analytics
+      - task: docker:build:mcp
+      - task: docker:build:web
+
   clean:
     desc: Clean build artifacts
     cmds:
