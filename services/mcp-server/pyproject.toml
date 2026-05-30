@@ -3,7 +3,9 @@ name = "ids-mcp"
 version = "0.1.0"
 description = "IDS OT/IT MCP Server (Read-Only)"
 requires-python = ">=3.10"
-dependencies = []
+dependencies = [
+    "httpx>=0.28.1",
+]
 
 [project.optional-dependencies]
 dev = [
