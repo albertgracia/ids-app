@@ -4,7 +4,9 @@ version = "0.1.0"
 description = "IDS OT/IT MCP Server (Read-Only)"
 requires-python = ">=3.10"
 dependencies = [
+    "fastapi>=0.136.3",
     "httpx>=0.28.1",
+    "uvicorn>=0.48.0",
 ]
 
 [project.optional-dependencies]
