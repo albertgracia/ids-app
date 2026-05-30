@@ -2,7 +2,8 @@
 
 import { useMemo } from "react";
 import type { EventItem } from "@/lib/types";
-import { ZONES, ZONE_COLORS, SEV_COLORS, inferZone, L, type Zone } from "@/lib/soc-utils";
+import { ZONES, ZONE_COLORS, SEV_COLORS, inferZone, type Zone } from "@/lib/soc-utils";
+import { L } from "@/lib/soc-labels";
 
 interface Props {
   events: EventItem[];
@@ -33,25 +34,15 @@ export default function TopologyGraph({ events }: Props) {
     const nodeMap = new Map<string, NodeInfo>();
     for (const ip of ipSet) {
       const zone = inferZone(ip, events);
-      const related = events.filter(
-        (e) => e.source.ip === ip || e.destination.ip === ip
-      );
+      const related = events.filter((e) => e.source.ip === ip || e.destination.ip === ip);
       const protocols = new Set(related.map((e) => e.protocol));
-      const crit = related.filter(
-        (e) => e.severity === "critical" || e.severity === "high"
-      ).length;
-      nodeMap.set(ip, {
-        ip,
-        zone,
-        eventCount: related.length,
-        protocols,
-        criticalCount: crit,
-      });
+      const crit = related.filter((e) => e.severity === "critical" || e.severity === "high").length;
+      nodeMap.set(ip, { ip, zone, eventCount: related.length, protocols, criticalCount: crit });
     }
 
     const edgeMap = new Map<string, EdgeInfo>();
     for (const e of events) {
-      const key = `${e.source.ip}→${e.destination.ip}`;
+      const key = `${e.source.ip}\u2192${e.destination.ip}`;
       const existing = edgeMap.get(key);
       if (existing) {
         existing.count++;
@@ -60,21 +51,12 @@ export default function TopologyGraph({ events }: Props) {
         const newIdx = sevOrder.indexOf(e.severity);
         if (newIdx < curIdx) existing.sev = e.severity;
       } else {
-        edgeMap.set(key, {
-          from: e.source.ip,
-          to: e.destination.ip,
-          count: 1,
-          sev: e.severity,
-        });
+        edgeMap.set(key, { from: e.source.ip, to: e.destination.ip, count: 1, sev: e.severity });
       }
     }
 
-    const sortedEdges = [...edgeMap.values()]
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 30);
-
+    const sortedEdges = [...edgeMap.values()].sort((a, b) => b.count - a.count).slice(0, 30);
     const nodes = [...nodeMap.values()];
-
     return { nodes, edges: sortedEdges, nodeMap };
   }, [events]);
 
@@ -83,9 +65,7 @@ export default function TopologyGraph({ events }: Props) {
     for (const z of ZONES) cols[z] = [];
     cols["unknown"] = [];
     for (const n of nodes) {
-      const z = ZONES.includes(n.zone as Zone)
-        ? n.zone
-        : "unknown";
+      const z = ZONES.includes(n.zone as Zone) ? n.zone : "unknown";
       if (cols[z]) cols[z].push(n);
       else cols["unknown"].push(n);
     }
@@ -103,11 +83,9 @@ export default function TopologyGraph({ events }: Props) {
   const MIN_NODE_R = 8;
   const MAX_NODE_R = 22;
 
-  const zoneColumns = [...ZONES, "unknown" as const].filter(
-    (z) => columns[z]?.length > 0
-  );
-
+  const zoneColumns = [...ZONES, "unknown" as const].filter((z) => columns[z]?.length > 0);
   const svgW = PAD_LEFT + zoneColumns.length * COL_W + Math.max(0, zoneColumns.length - 1) * COL_GAP + 20;
+
   let maxColH = 0;
   const colPositions: Record<string, { x: number; nodeYs: Map<string, number> }> = {};
   for (let ci = 0; ci < zoneColumns.length; ci++) {
@@ -129,26 +107,20 @@ export default function TopologyGraph({ events }: Props) {
   return (
     <div className="panel topo-panel">
       <div className="panel-header">
-        Network Topology
+        {L.panels.topology}
         <span className="topo-stats">
-          {nodes.length} {L.nodes} · {edges.length} {L.edges}
+          {nodes.length} {L.topology.nodes} \u00b7 {edges.length} {L.topology.edges}
         </span>
       </div>
       <svg
         viewBox={`0 0 ${svgW} ${svgH}`}
         className="topo-svg"
         role="img"
-        aria-label="Network topology graph showing IP nodes grouped by zone with traffic edges"
+        aria-label="Topología OT/IT: nodos IP agrupados por zona con enlaces de tráfico"
+        style={{ overflow: "hidden" }}
       >
         <defs>
-          <marker
-            id="topo-arrow"
-            markerWidth="5"
-            markerHeight="4"
-            refX="5"
-            refY="2"
-            orient="auto"
-          >
+          <marker id="topo-arrow" markerWidth="5" markerHeight="4" refX="5" refY="2" orient="auto">
             <polygon points="0 0, 5 2, 0 4" fill="#6e7b8c" />
           </marker>
         </defs>
@@ -184,12 +156,8 @@ export default function TopologyGraph({ events }: Props) {
           const fromN = nodeMap.get(edge.from);
           const toN = nodeMap.get(edge.to);
           if (!fromN || !toN) return null;
-          const fromZ = ZONES.includes(fromN.zone as Zone)
-            ? fromN.zone
-            : "unknown";
-          const toZ = ZONES.includes(toN.zone as Zone)
-            ? toN.zone
-            : "unknown";
+          const fromZ = ZONES.includes(fromN.zone as Zone) ? fromN.zone : "unknown";
+          const toZ = ZONES.includes(toN.zone as Zone) ? toN.zone : "unknown";
           const fromPos = colPositions[fromZ];
           const toPos = colPositions[toZ];
           if (!fromPos || !toPos) return null;
@@ -215,9 +183,7 @@ export default function TopologyGraph({ events }: Props) {
         })}
 
         {nodes.map((n) => {
-          const z = ZONES.includes(n.zone as Zone)
-            ? n.zone
-            : "unknown";
+          const z = ZONES.includes(n.zone as Zone) ? n.zone : "unknown";
           const pos = colPositions[z];
           if (!pos) return null;
           const cx = pos.x;
@@ -230,32 +196,11 @@ export default function TopologyGraph({ events }: Props) {
           return (
             <g key={`node-${n.ip}`}>
               {isCritical && (
-                <circle
-                  cx={cx}
-                  cy={cy}
-                  r={r + 4}
-                  fill="none"
-                  stroke="#f85149"
-                  strokeWidth={1}
-                  opacity={0.5}
-                >
-                  <animate
-                    attributeName="opacity"
-                    values="0.5;0.1;0.5"
-                    dur="2s"
-                    repeatCount="indefinite"
-                  />
+                <circle cx={cx} cy={cy} r={r + 4} fill="none" stroke="#f85149" strokeWidth={1} opacity={0.5}>
+                  <animate attributeName="opacity" values="0.5;0.1;0.5" dur="2s" repeatCount="indefinite" />
                 </circle>
               )}
-              <circle
-                cx={cx}
-                cy={cy}
-                r={r}
-                fill={zoneColor}
-                opacity={0.2}
-                stroke={zoneColor}
-                strokeWidth={1.2}
-              />
+              <circle cx={cx} cy={cy} r={r} fill={zoneColor} opacity={0.2} stroke={zoneColor} strokeWidth={1.2} />
               <text
                 x={cx}
                 y={cy + 1}
@@ -264,16 +209,9 @@ export default function TopologyGraph({ events }: Props) {
                 fontSize={Math.max(7, Math.min(10, r * 0.6))}
                 fontFamily="monospace"
               >
-                {n.ip.length > 11 ? n.ip.slice(0, 10) + "…" : n.ip}
+                {n.ip.length > 11 ? n.ip.slice(0, 10) + "\u2026" : n.ip}
               </text>
-              <text
-                x={cx}
-                y={cy + r + 10}
-                textAnchor="middle"
-                fill="#6e7b8c"
-                fontSize={7}
-                fontFamily="monospace"
-              >
+              <text x={cx} y={cy + r + 10} textAnchor="middle" fill="#6e7b8c" fontSize={7} fontFamily="monospace">
                 {n.eventCount}e
               </text>
             </g>

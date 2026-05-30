@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import type { EventItem } from "@/lib/types";
+import { L } from "@/lib/soc-labels";
 
 interface Props {
   events: EventItem[];
@@ -22,11 +23,11 @@ export default function ThreatRadarGrid({ events }: Props) {
     const lateral = events.filter((e) => e.direction === "lateral").length;
 
     return [
-      { label: "Scan", count: scan, color: "#db6d28" },
-      { label: "Auth", count: auth, color: "#d29922" },
-      { label: "Proto", count: proto, color: "#f85149" },
-      { label: "Malware", count: malware, color: "#f85149" },
-      { label: "Lateral", count: lateral, color: "#d29922" },
+      { label: L.threat.scan, count: scan, color: "#db6d28" },
+      { label: L.threat.auth, count: auth, color: "#d29922" },
+      { label: L.threat.proto, count: proto, color: "#f85149" },
+      { label: L.threat.malware, count: malware, color: "#f85149" },
+      { label: L.threat.lateral, count: lateral, color: "#d29922" },
     ];
   }, [events]);
 
@@ -43,10 +44,7 @@ export default function ThreatRadarGrid({ events }: Props) {
   const getPoint = (i: number, val: number) => {
     const angle = startAngle + i * angleStep;
     const r = (val / maxVal) * outerR;
-    return {
-      x: cx + r * Math.cos(angle),
-      y: cy + r * Math.sin(angle),
-    };
+    return { x: cx + r * Math.cos(angle), y: cy + r * Math.sin(angle) };
   };
 
   const polygonPoints = axes
@@ -61,13 +59,23 @@ export default function ThreatRadarGrid({ events }: Props) {
 
   return (
     <div className="panel radar-panel">
-      <div className="panel-header">Threat Radar</div>
+      <div className="panel-header">{L.panels.threatRadar}</div>
       <svg
         viewBox={`0 0 ${svgW} ${svgH}`}
         className="radar-svg"
         role="img"
-        aria-label="Threat radar chart showing 5 attack dimensions"
+        aria-label="Radar de amenazas: 5 dimensiones de ataque"
+        style={{ overflow: "hidden" }}
       >
+        {/* Radial gradient for subtle depth */}
+        <defs>
+          <radialGradient id="radar-grad" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stopColor="var(--accent)" stopOpacity="0.06" />
+            <stop offset="100%" stopColor="var(--accent)" stopOpacity="0" />
+          </radialGradient>
+        </defs>
+        <rect x="0" y="0" width={svgW} height={svgH} fill="url(#radar-grad)" />
+
         {Array.from({ length: gridLevels }, (_, level) => {
           const r = (outerR / gridLevels) * (level + 1);
           const pts = axes
@@ -77,13 +85,7 @@ export default function ThreatRadarGrid({ events }: Props) {
             })
             .join(" ");
           return (
-            <polygon
-              key={`grid-${level}`}
-              points={pts}
-              fill="none"
-              stroke="#1e2a3a"
-              strokeWidth={0.5}
-            />
+            <polygon key={`grid-${level}`} points={pts} fill="none" stroke="#1e2a3a" strokeWidth={0.5} />
           );
         })}
 
@@ -112,20 +114,12 @@ export default function ThreatRadarGrid({ events }: Props) {
 
         {axes.map((a, i) => {
           const angle = startAngle + i * angleStep;
-          const px = a.count / maxVal;
-          const r = px * outerR;
+          const r = (a.count / maxVal) * outerR;
           const dotX = cx + r * Math.cos(angle);
           const dotY = cy + r * Math.sin(angle);
           return (
             <g key={`dot-${i}`}>
-              <circle
-                cx={dotX}
-                cy={dotY}
-                r={4}
-                fill={a.color}
-                stroke="#0a0e14"
-                strokeWidth={1}
-              />
+              <circle cx={dotX} cy={dotY} r={4} fill={a.color} stroke="#0a0e14" strokeWidth={1} />
               <text
                 x={dotX}
                 y={dotY - 8}
@@ -162,14 +156,7 @@ export default function ThreatRadarGrid({ events }: Props) {
           );
         })}
 
-        <text
-          x={cx}
-          y={cy + 4}
-          textAnchor="middle"
-          fill="#6e7b8c"
-          fontSize={8}
-          fontFamily="monospace"
-        >
+        <text x={cx} y={cy + 4} textAnchor="middle" fill="#6e7b8c" fontSize={8} fontFamily="monospace">
           max:{maxVal}
         </text>
       </svg>

@@ -2,6 +2,7 @@
 
 import { useRef, useEffect } from "react";
 import type { CoreStatus, EventItem } from "@/lib/types";
+import { L } from "@/lib/soc-labels";
 
 interface Props {
   events: EventItem[];
@@ -10,7 +11,8 @@ interface Props {
 
 function severityCounts(events: EventItem[]) {
   const sev: Record<string, number> = { critical: 0, high: 0, medium: 0, low: 0, info: 0 };
-  let ot = 0, it = 0;
+  let ot = 0,
+    it = 0;
   for (const e of events) {
     sev[e.severity] = (sev[e.severity] || 0) + 1;
     if (e.zone === "ot") ot++;
@@ -53,50 +55,14 @@ export default function ExecutiveKpiStrip({ events, coreStatus }: Props) {
 
   return (
     <div className="kpi-strip">
-      <KpiCard
-        label="Total Events"
-        value={total}
-        trend={trendRef.current["total"]}
-      />
-      <KpiCard
-        label="Critical"
-        value={sev.critical}
-        color="var(--critical)"
-        trend={trendRef.current["critical"]}
-      />
-      <KpiCard
-        label="High"
-        value={sev.high}
-        color="var(--high)"
-        trend={trendRef.current["high"]}
-      />
-      <KpiCard
-        label="Medium"
-        value={sev.medium}
-        color="var(--medium)"
-        trend={trendRef.current["medium"]}
-      />
-      <KpiCard
-        label="OT Events"
-        value={ot}
-        trend={trendRef.current["ot"]}
-      />
-      <KpiCard
-        label="IT Events"
-        value={it}
-        trend={trendRef.current["it"]}
-      />
-      <KpiCard
-        label="High/Critical"
-        value={highCrit}
-        color="var(--critical)"
-        trend={trendRef.current["highCrit"]}
-      />
-      <KpiCard
-        label="Services"
-        value={svcCount}
-        suffix={coreStatus ? "ok" : "?"}
-      />
+      <KpiCard label={L.kpi.totalEvents} value={total} trend={trendRef.current.total} />
+      <KpiCard label={L.kpi.critical} value={sev.critical} color="var(--critical)" trend={trendRef.current.critical} />
+      <KpiCard label={L.kpi.high} value={sev.high} color="var(--high)" trend={trendRef.current.high} />
+      <KpiCard label={L.kpi.medium} value={sev.medium} color="var(--medium)" trend={trendRef.current.medium} />
+      <KpiCard label={L.kpi.otEvents} value={ot} trend={trendRef.current.ot} />
+      <KpiCard label={L.kpi.itEvents} value={it} trend={trendRef.current.it} />
+      <KpiCard label={L.kpi.highCritical} value={highCrit} color="var(--critical)" trend={trendRef.current.highCrit} />
+      <KpiCard label={L.kpi.services} value={svcCount} suffix={coreStatus ? "ok" : "?"} />
     </div>
   );
 }
@@ -122,11 +88,8 @@ function KpiCard({
           {suffix ? <small>/{suffix}</small> : null}
         </span>
         {trend && trend !== "flat" && (
-          <span
-            className={`kpi-trend kpi-trend-${trend}`}
-            title={trend === "up" ? "Increasing" : "Decreasing"}
-          >
-            {trend === "up" ? "▲" : "▼"}
+          <span className={`kpi-trend kpi-trend-${trend}`} title={trend === "up" ? "Increasing" : "Decreasing"}>
+            {trend === "up" ? "\u25B2" : "\u25BC"}
           </span>
         )}
       </div>

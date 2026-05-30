@@ -1,19 +1,14 @@
 "use client";
 
 import type { EventItem } from "@/lib/types";
-import { ZONES, SEV_COLORS, classifyEventZone, type Zone } from "@/lib/soc-utils";
+import { ZONES, SEV_COLORS, classifyEventZone, type Zone, ZONE_LABELS } from "@/lib/soc-utils";
+import { L } from "@/lib/soc-labels";
 
 interface Props {
   events: EventItem[];
 }
 
 const SEVERITIES = ["critical", "high", "medium", "low", "info"] as const;
-const ZONE_LABELS: Record<string, string> = {
-  external: "External",
-  dmz: "DMZ",
-  it: "IT",
-  ot: "OT",
-};
 
 export default function AttackWorldMap({ events }: Props) {
   const zoneSevCounts: Record<string, Record<string, number>> = {};
@@ -38,7 +33,7 @@ export default function AttackWorldMap({ events }: Props) {
     const from = ZONES[i];
     const to = ZONES[i + 1];
     let count = 0;
-    let sevCounts: Record<string, number> = {};
+    const sevCounts: Record<string, number> = {};
     for (const e of events) {
       const z = classifyEventZone(e);
       if (z === from || z === to) {
@@ -62,12 +57,13 @@ export default function AttackWorldMap({ events }: Props) {
 
   return (
     <div className="panel awm-panel">
-      <div className="panel-header">Attack Surface Map</div>
+      <div className="panel-header">{L.panels.attackMap}</div>
       <svg
         viewBox={`0 0 ${PAD_LEFT + ZONES.length * CELL_W + (ZONES.length - 1) * COL_GAP + 20} ${svgH}`}
         className="awm-svg"
         role="img"
-        aria-label="Attack surface heatmap showing threats per zone and severity"
+        aria-label="Mapa táctico de ataques: heatmap de amenazas por zona y severidad"
+        style={{ overflow: "hidden" }}
       >
         {SEVERITIES.map((sev, si) => (
           <text
@@ -153,14 +149,8 @@ export default function AttackWorldMap({ events }: Props) {
                 fill={SEV_COLORS[ep.sev] || "#6e7b8c"}
                 opacity={0.7}
               />
-              <text
-                x={midX}
-                y={y - 4}
-                textAnchor="middle"
-                fill="#6e7b8c"
-                fontSize={8}
-              >
-                {ep.count} events
+              <text x={midX} y={y - 4} textAnchor="middle" fill="#6e7b8c" fontSize={8}>
+                {ep.count} {L.events.titleCol.toLowerCase()}
               </text>
             </g>
           );

@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import type { EventItem } from "@/lib/types";
 import { inferZone } from "@/lib/soc-utils";
+import { L } from "@/lib/soc-labels";
 
 interface Props {
   events: EventItem[];
@@ -87,8 +88,8 @@ export default function AssetIntelligencePanel({ events }: Props) {
   if (assets.length === 0) {
     return (
       <div className="panel asset-panel">
-        <div className="panel-header">Asset Intelligence</div>
-        <div className="empty-state">No assets derived</div>
+        <div className="panel-header">{L.panels.assets}</div>
+        <div className="empty-state">{L.assets.noAssets}</div>
       </div>
     );
   }
@@ -96,30 +97,44 @@ export default function AssetIntelligencePanel({ events }: Props) {
   return (
     <div className="panel asset-panel">
       <div className="panel-header">
-        Asset Intelligence
+        {L.panels.assets}
         <span className="panel-sub">{assets.length} IPs</span>
       </div>
       <div className="asset-table-wrap">
         <table className="asset-table">
           <thead>
             <tr>
-              <th>IP</th>
-              <th>Zone</th>
-              <th>Events</th>
-              <th>Crit/High</th>
-              <th>Criticality</th>
-              <th>Protocols</th>
-              <th>Last Seen</th>
+              <th>{L.assets.ip}</th>
+              <th>{L.events.zone}</th>
+              <th>{L.assets.events}</th>
+              <th>{L.assets.critHigh}</th>
+              <th>{L.assets.criticality}</th>
+              <th>{L.assets.protocols}</th>
+              <th>{L.assets.lastSeen}</th>
             </tr>
           </thead>
           <tbody>
             {assets.map((a) => (
               <tr key={a.ip}>
                 <td className="cell-mono">{a.ip}</td>
-                <td><span className={`zone-tag zone-${a.zone}`}>{a.zone}</span></td>
+                <td>
+                  <span className={`zone-tag zone-${a.zone}`}>{a.zone}</span>
+                </td>
                 <td className="cell-mono">{a.eventCount}</td>
-                <td className={`cell-mono ${a.critHigh > 0 ? "sev-high" : ""}`}>{a.critHigh}</td>
-                <td><span className="sev-badge" style={{ background: `${critColor(a.criticality)}22`, color: critColor(a.criticality) }}>{a.criticality}</span></td>
+                <td className={`cell-mono ${a.critHigh > 0 ? "sev-high" : ""}`}>
+                  {a.critHigh}
+                </td>
+                <td>
+                  <span
+                    className="sev-badge"
+                    style={{
+                      background: `${critColor(a.criticality)}22`,
+                      color: critColor(a.criticality),
+                    }}
+                  >
+                    {a.criticality}
+                  </span>
+                </td>
                 <td className="cell-mono cell-protos">{a.protocols}</td>
                 <td className="cell-mono">{a.lastSeen.toLocaleTimeString()}</td>
               </tr>

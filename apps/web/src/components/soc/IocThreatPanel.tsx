@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import type { EventItem } from "@/lib/types";
+import { L } from "@/lib/soc-labels";
 
 interface Props {
   events: EventItem[];
@@ -55,8 +56,8 @@ export default function IocThreatPanel({ events }: Props) {
   if (iocs.length === 0) {
     return (
       <div className="panel ioc-panel">
-        <div className="panel-header">IoC Threats</div>
-        <div className="empty-state">No IoCs detected</div>
+        <div className="panel-header">{L.panels.ioCs}</div>
+        <div className="empty-state">{L.ioCs.noIoCs}</div>
       </div>
     );
   }
@@ -64,19 +65,19 @@ export default function IocThreatPanel({ events }: Props) {
   return (
     <div className="panel ioc-panel">
       <div className="panel-header">
-        IoC Threats
-        <span className="panel-sub">{iocs.length} indicators</span>
+        {L.panels.ioCs}
+        <span className="panel-sub">{iocs.length} indicadores</span>
       </div>
       <div className="ioc-table-wrap">
         <table className="ioc-table">
           <thead>
             <tr>
-              <th>Source IP</th>
-              <th>Threat Type</th>
-              <th>Sev</th>
-              <th>Count</th>
-              <th>Targets</th>
-              <th>Last Seen</th>
+              <th>{L.ioCs.sourceIp}</th>
+              <th>{L.ioCs.threatType}</th>
+              <th>{L.events.severity}</th>
+              <th>{L.ioCs.count}</th>
+              <th>{L.ioCs.targets}</th>
+              <th>{L.assets.lastSeen}</th>
             </tr>
           </thead>
           <tbody>
@@ -84,11 +85,13 @@ export default function IocThreatPanel({ events }: Props) {
               <tr key={`${ioc.sourceIp}-${ioc.type}-${idx}`}>
                 <td className="cell-mono">{ioc.sourceIp}</td>
                 <td>
-                  <span className="ioc-type-tag">{ioc.type.replace(/_/g, " ")}</span>
+                  <span className="ioc-type-tag">
+                    {ioc.type.replace(/_/g, " ")}
+                  </span>
                 </td>
                 <td>
                   <span className={`sev-badge sev-${ioc.severity}`}>
-                    {ioc.severity.slice(0, 1)}
+                    {ioc.severity.slice(0, 1).toUpperCase()}
                   </span>
                 </td>
                 <td className="cell-mono">{ioc.count}</td>
@@ -96,7 +99,9 @@ export default function IocThreatPanel({ events }: Props) {
                   {[...ioc.destIps].slice(0, 3).join(", ")}
                   {ioc.destIps.size > 3 ? ` +${ioc.destIps.size - 3}` : ""}
                 </td>
-                <td className="cell-mono">{ioc.lastSeen.toLocaleTimeString()}</td>
+                <td className="cell-mono">
+                  {ioc.lastSeen.toLocaleTimeString()}
+                </td>
               </tr>
             ))}
           </tbody>
