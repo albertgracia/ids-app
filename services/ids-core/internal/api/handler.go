@@ -8,17 +8,19 @@ import (
 	"strings"
 
 	"github.com/albertgracia/ids-app/services/ids-core/internal/domain"
+	"github.com/albertgracia/ids-app/services/ids-core/internal/eventstream"
 	"github.com/albertgracia/ids-app/services/ids-core/internal/ingest"
 	"github.com/albertgracia/ids-app/services/ids-core/internal/storage"
 )
 
 type EventHandler struct {
-	repo      storage.EventRepository
-	simulator *ingest.Simulator
+	repo        storage.EventRepository
+	simulator   *ingest.Simulator
+	broadcaster *eventstream.Broadcaster
 }
 
-func NewEventHandler(repo storage.EventRepository, simulator *ingest.Simulator) *EventHandler {
-	return &EventHandler{repo: repo, simulator: simulator}
+func NewEventHandler(repo storage.EventRepository, simulator *ingest.Simulator, broadcaster *eventstream.Broadcaster) *EventHandler {
+	return &EventHandler{repo: repo, simulator: simulator, broadcaster: broadcaster}
 }
 
 type recentEventsResponse struct {
@@ -118,6 +120,7 @@ func (h *EventHandler) HandleSimulateEvents(w http.ResponseWriter, r *http.Reque
 			writeJSON(w, 500, map[string]string{"error": err.Error()})
 			return
 		}
+		h.broadcaster.Publish(e)
 	}
 
 	items := make([]json.RawMessage, 0, len(events))

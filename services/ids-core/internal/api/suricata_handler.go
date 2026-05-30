@@ -5,15 +5,17 @@ import (
 	"io"
 	"net/http"
 
+	"github.com/albertgracia/ids-app/services/ids-core/internal/eventstream"
 	"github.com/albertgracia/ids-app/services/ids-core/internal/suricata"
 )
 
 type SuricataHandler struct {
-	ingestor *suricata.EVEIngestor
+	ingestor    *suricata.EVEIngestor
+	broadcaster *eventstream.Broadcaster
 }
 
-func NewSuricataHandler(ingestor *suricata.EVEIngestor) *SuricataHandler {
-	return &SuricataHandler{ingestor: ingestor}
+func NewSuricataHandler(ingestor *suricata.EVEIngestor, broadcaster *eventstream.Broadcaster) *SuricataHandler {
+	return &SuricataHandler{ingestor: ingestor, broadcaster: broadcaster}
 }
 
 type suricataEveResponse struct {
@@ -55,6 +57,7 @@ func (h *SuricataHandler) HandleEVE(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, 400, map[string]string{"error": err.Error()})
 		return
 	}
+	h.broadcaster.Publish(evt)
 
 	data, _ := json.Marshal(evt)
 	writeJSON(w, 200, suricataEveResponse{
@@ -90,6 +93,10 @@ func (h *SuricataHandler) HandleEVEBatch(w http.ResponseWriter, r *http.Request)
 	if len(events) > 100 {
 		writeJSON(w, 400, map[string]string{"error": "batch exceeds maximum of 100 events"})
 		return
+	}
+
+	for _, evt := range events {
+		h.broadcaster.Publish(evt)
 	}
 
 	items := make([]json.RawMessage, 0, len(events))

@@ -1,6 +1,6 @@
 package main
 
-	import (
+import (
 	"context"
 	"encoding/json"
 	"log"
@@ -11,6 +11,7 @@ package main
 	"time"
 
 	"github.com/albertgracia/ids-app/services/ids-core/internal/api"
+	"github.com/albertgracia/ids-app/services/ids-core/internal/eventstream"
 	"github.com/albertgracia/ids-app/services/ids-core/internal/ingest"
 	"github.com/albertgracia/ids-app/services/ids-core/internal/storage"
 	"github.com/albertgracia/ids-app/services/ids-core/internal/suricata"
@@ -33,6 +34,7 @@ type serviceStatus struct {
 	Version      string   `json:"version"`
 	StorageMode  string   `json:"storage_mode"`
 	Capabilities []string `json:"capabilities"`
+	LiveStream   string   `json:"live_stream,omitempty"`
 }
 
 func main() {
@@ -69,11 +71,13 @@ func main() {
 		log.Printf("storage mode: memory (max 5000 events)")
 	}
 
+	broadcaster := eventstream.NewBroadcaster()
+
 	simulator := ingest.NewSimulator(nil)
-	handler := api.NewEventHandler(repo, simulator)
+	handler := api.NewEventHandler(repo, simulator, broadcaster)
 
 	eveIngestor := suricata.NewEVEIngestor(repo)
-	suriHandler := api.NewSuricataHandler(eveIngestor)
+	suriHandler := api.NewSuricataHandler(eveIngestor, broadcaster)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/healthz", handleHealthz)
@@ -83,6 +87,7 @@ func main() {
 	mux.HandleFunc("/api/v1/simulate/events", handler.HandleSimulateEvents)
 	mux.HandleFunc("/api/v1/suricata/eve", suriHandler.HandleEVE)
 	mux.HandleFunc("/api/v1/suricata/eve/batch", suriHandler.HandleEVEBatch)
+	mux.HandleFunc("/api/v1/events/stream", eventstream.SSEHandler(broadcaster))
 
 	server := &http.Server{
 		Addr:    ":" + port,
@@ -104,6 +109,7 @@ func main() {
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	server.Shutdown(shutdownCtx)
+	broadcaster.Close()
 	repo.Close(shutdownCtx)
 }
 
@@ -129,12 +135,14 @@ func handleStatus(w http.ResponseWriter, r *http.Request) {
 		Mode:        "development",
 		Version:     "0.1.0",
 		StorageMode: storageMode,
+		LiveStream:  "sse",
 		Capabilities: []string{
 			"event_model",
 			"asset_inventory_model",
 			"simulated_ingest",
 			"suricata_eve_parser",
 			"suricata_eve_ingest",
+			"live_events_stream",
 		},
 	})
 }
