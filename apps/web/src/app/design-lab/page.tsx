@@ -82,6 +82,15 @@ const mockEvents: MockEvent[] = [
   },
 ];
 
+// --- Asset map for Inspector "Activo afectado" ---
+const assetMap: Record<string, { name: string; zone: string; type: string }> = {
+  "172.16.100.20": { name: "PLC-1", zone: "ot", type: "Controlador Lógico Programable (Modbus)" },
+  "198.51.100.90": { name: "C2-EXTERNAL", zone: "external", type: "Servidor de Comando y Control externo" },
+  "10.10.1.5": { name: "DC-01", zone: "it", type: "Controlador de Dominio (Active Directory)" },
+  "10.10.1.50": { name: "IT-GW", zone: "it", type: "Gateway IT / Enrutador interno" },
+  "10.10.1.70": { name: "S7-DEVICE", zone: "ot", type: "Dispositivo Siemens S7-1200" },
+};
+
 const kpiData = [
   { label: "Total Eventos", value: "3,847", trend: "+12%", trendUp: true, color: "accent" },
   { label: "Críticos", value: "12", trend: "+3", trendUp: true, color: "critical" },
@@ -105,12 +114,12 @@ const timelineBuckets = [
 ];
 
 const attackLines = [
-  { id: "a1", x1: 530, y1: 55, x2: 180, y2: 155, sev: "critical", label: "C2 Beacon (CN)" },
-  { id: "a2", x1: 350, y1: 30, x2: 180, y2: 155, sev: "high", label: "SSH Bruteforce (RU)" },
-  { id: "a3", x1: 300, y1: 105, x2: 180, y2: 155, sev: "medium", label: "Recon Scan (NG)" },
-  { id: "a4", x1: 470, y1: 80, x2: 180, y2: 155, sev: "high", label: "Exploit Attempt (IN)" },
-  { id: "a5", x1: 210, y1: 50, x2: 180, y2: 155, sev: "medium", label: "Phishing Origin (US)" },
-  { id: "a6", x1: 520, y1: 205, x2: 180, y2: 155, sev: "low", label: "Port Scan (AU)" },
+  { id: "a1", x1: 530, y1: 55, x2: 180, y2: 155, sev: "critical", label: "C2 Beacon", country: "CN" },
+  { id: "a2", x1: 350, y1: 30, x2: 180, y2: 155, sev: "high", label: "SSH Bruteforce", country: "NL" },
+  { id: "a3", x1: 300, y1: 105, x2: 180, y2: 155, sev: "medium", label: "Recon Scan", country: "BR" },
+  { id: "a4", x1: 470, y1: 80, x2: 180, y2: 155, sev: "high", label: "Exploit Attempt", country: "IN" },
+  { id: "a5", x1: 210, y1: 50, x2: 180, y2: 155, sev: "medium", label: "Phishing Origin", country: "US" },
+  { id: "a6", x1: 520, y1: 205, x2: 180, y2: 155, sev: "low", label: "Port Scan", country: "AU" },
 ];
 
 // ============================================================
@@ -189,7 +198,7 @@ function WorldThreatMap() {
         <circle cx={180} cy={155} r={4} fill={COLORS.accent} filter="url(#glow)" />
         <text x={180} y={180} textAnchor="middle" fill={COLORS.accent} fontSize="7" fontFamily="monospace">RED INTERNA</text>
 
-        {/* Attack lines */}
+        {/* Attack lines — thicker, higher contrast */}
         {attackLines.map((a) => {
           const cx = (a.x1 + a.x2) / 2;
           const cy = Math.min(a.y1, a.y2) - 35;
@@ -197,22 +206,25 @@ function WorldThreatMap() {
           return (
             <g key={a.id}>
               {/* Source dot */}
-              <circle cx={a.x1} cy={a.y1} r={3} fill={c} className="attack-dot">
-                <animate attributeName="r" values="2;4;2" dur="2s" repeatCount="indefinite" />
-                <animate attributeName="opacity" values="0.6;1;0.6" dur="2s" repeatCount="indefinite" />
+              <circle cx={a.x1} cy={a.y1} r={4} fill={c} className="attack-dot" opacity={0.9}>
+                <animate attributeName="r" values="3;5;3" dur="2s" repeatCount="indefinite" />
+                <animate attributeName="opacity" values="0.7;1;0.7" dur="2s" repeatCount="indefinite" />
               </circle>
-              {/* Curved line */}
+              {/* Curved line — brighter, 1.5px thickness */}
               <path d={`M ${a.x1},${a.y1} Q ${cx},${cy} ${a.x2},${a.y2}`}
-                fill="none" stroke={c} strokeWidth={1} strokeDasharray="6 4" opacity={0.7}
-                className="attack-line" />
+                fill="none" stroke={c} strokeWidth={1.5} strokeDasharray="6 4" opacity={0.8}
+                className="attack-line" filter="url(#glow)" />
               {/* Data packet traveling */}
               <circle r={2.5} fill={c} opacity={0.9} className="packet">
                 <animateMotion dur="3s" repeatCount="indefinite"
                   path={`M ${a.x1},${a.y1} Q ${cx},${cy} ${a.x2},${a.y2}`} />
               </circle>
-              {/* Label */}
-              <text x={cx} y={cy - 3} textAnchor="middle" fill={c} fontSize="5.5"
-                fontFamily="monospace" opacity={0.8}>{a.label}</text>
+              {/* Country label near source */}
+              <text x={a.x1} y={a.y1 - 10} textAnchor="middle" fill={c} fontSize="6.5"
+                fontFamily="monospace" fontWeight={700} opacity={0.9}>{a.country}</text>
+              {/* Attack label on curve */}
+              <text x={cx} y={cy - 6} textAnchor="middle" fill={c} fontSize="5.5"
+                fontFamily="monospace" opacity={0.85}>{a.label}</text>
             </g>
           );
         })}
@@ -220,9 +232,12 @@ function WorldThreatMap() {
       <div className="map-legend">
         {(["critical", "high", "medium", "low"] as const).map((s) => (
           <span key={s} style={{ color: sevColor(s), marginRight: 12, fontSize: 10 }}>
-            ● {s.toUpperCase()}
+            ● {s === "critical" ? "CRÍTICO" : s === "high" ? "ALTO" : s === "medium" ? "MEDIO" : "BAJO"}
           </span>
         ))}
+      </div>
+      <div className="map-geoip-legend">
+        GeoIP sintético de staging — sin proveedor externo
       </div>
       <style jsx>{`
         .attack-line {
@@ -233,6 +248,13 @@ function WorldThreatMap() {
         }
         .packet {
           filter: drop-shadow(0 0 3px currentColor);
+        }
+        .map-geoip-legend {
+          margin-top: 2px;
+          font-size: 7.5px;
+          color: ${COLORS.dim};
+          font-style: italic;
+          text-align: right;
         }
       `}</style>
     </div>
@@ -248,7 +270,7 @@ function TopologyGraph() {
     <div className="panel topo-panel">
       <div className="panel-header">
         <span>🔗 TOPOLOGÍA DE RED OT/IT</span>
-        <span className="topo-stats">12 nodos · 4 zonas</span>
+        <span className="topo-stats">13 nodos · 4 zonas · 1 sensor IDS</span>
       </div>
       <svg viewBox="0 0 390 270" className="topo-svg" style={{ display: "block", marginTop: 4 }}>
         <defs>
@@ -259,23 +281,28 @@ function TopologyGraph() {
           <marker id="arrowhead" markerWidth="6" markerHeight="4" refX="6" refY="2" orient="auto">
             <polygon points="0 0, 6 2, 0 4" fill={COLORS.border} />
           </marker>
+          <marker id="arrowhead-obs" markerWidth="5" markerHeight="3" refX="5" refY="1.5" orient="auto">
+            <polygon points="0 0, 5 1.5, 0 3" fill={COLORS.accent} />
+          </marker>
         </defs>
 
-        {/* Zone backgrounds */}
+        {/* Zone backgrounds with clearer labels */}
         {[
-          { x: 2, w: 78, color: "#f8514922", label: "🌐 EXTERNO" },
-          { x: 82, w: 78, color: "#d2992222", label: "🛡 DMZ" },
-          { x: 162, w: 78, color: "#58a6ff22", label: "💻 IT" },
-          { x: 242, w: 146, color: "#db6d2822", label: "⚙ OT" },
+          { x: 2, w: 78, color: "#f8514922", label: "🌐 EXTERNA", sub: "Internet / WAN" },
+          { x: 82, w: 78, color: "#d2992222", label: "🛡 DMZ", sub: "Perímetro" },
+          { x: 162, w: 78, color: "#58a6ff22", label: "💻 IT", sub: "Corporativa" },
+          { x: 242, w: 146, color: "#db6d2822", label: "⚙ OT", sub: "Industrial" },
         ].map((z) => (
           <g key={z.label}>
             <rect x={z.x} y={0} width={z.w} height={270} rx={2} fill={z.color} stroke={COLORS.border} strokeWidth={0.5} />
-            <text x={z.x + z.w / 2} y={15} textAnchor="middle" fill={COLORS.dim} fontSize="8"
+            <text x={z.x + z.w / 2} y={13} textAnchor="middle" fill={COLORS.dim} fontSize="8"
               fontWeight={600} fontFamily="system-ui">{z.label}</text>
+            <text x={z.x + z.w / 2} y={23} textAnchor="middle" fill={COLORS.dim} fontSize="6"
+              fontFamily="system-ui" opacity={0.6}>{z.sub}</text>
           </g>
         ))}
 
-        {/* Node definitions: { x, y, label, ip, zone, pulse? } */}
+        {/* Node definitions */}
         {[
           { x: 40, y: 55, label: "EXT-1", ip: "198.51.100.x", zone: "external" },
           { x: 40, y: 120, label: "EXT-2", ip: "203.0.113.x", zone: "external" },
@@ -290,23 +317,28 @@ function TopologyGraph() {
           { x: 300, y: 110, label: "SCADA", ip: "172.16.100.10", zone: "ot" },
           { x: 300, y: 185, label: "HMI", ip: "172.16.100.30", zone: "ot" },
           { x: 345, y: 240, label: "S7-1200", ip: "172.16.100.50", zone: "ot", pulse: true },
-        ].map((n, i) => {
+          // NEW: IDS Sensor — observer node bridging IT ↔ OT
+          { x: 250, y: 258, label: "IDS", ip: "sensor ids", zone: "it", isSensor: true },
+        ].map((n) => {
           const zc = n.zone === "external" ? COLORS.critical :
                      n.zone === "dmz" ? COLORS.high :
                      n.zone === "it" ? COLORS.accent : COLORS.ot;
+          const isSensor = (n as { isSensor?: boolean }).isSensor;
           return (
             <g key={n.label}>
-              {/* Pulse ring */}
+              {/* Pulse ring — subtle (opacity 0.3) */}
               {n.pulse && (
-                <circle cx={n.x} cy={n.y} r={9} fill="none" stroke={zc} strokeWidth={1} opacity={0.5}
+                <circle cx={n.x} cy={n.y} r={9} fill="none" stroke={zc} strokeWidth={1} opacity={0.3}
                   className="node-pulse-ring" />
               )}
               {/* Node circle */}
-              <circle cx={n.x} cy={n.y} r={6} fill={COLORS.panel} stroke={zc} strokeWidth={1.8} />
-              <circle cx={n.x} cy={n.y} r={2.5} fill={zc} />
+              <circle cx={n.x} cy={n.y} r={isSensor ? 7 : 6} fill={COLORS.panel}
+                stroke={isSensor ? COLORS.accent : zc} strokeWidth={isSensor ? 2 : 1.8}
+                strokeDasharray={isSensor ? "3 2" : "none"} />
+              <circle cx={n.x} cy={n.y} r={isSensor ? 3.5 : 2.5} fill={isSensor ? COLORS.accent : zc} />
               {/* Label */}
-              <text x={n.x} y={n.y + 16} textAnchor="middle" fill={COLORS.text} fontSize="7.5"
-                fontWeight={600} fontFamily="system-ui">{n.label}</text>
+              <text x={n.x} y={n.y + 16} textAnchor="middle" fill={isSensor ? COLORS.accent : COLORS.text}
+                fontSize="7.5" fontWeight={600} fontFamily="system-ui">{n.label}</text>
               <text x={n.x} y={n.y + 26} textAnchor="middle" fill={COLORS.dim} fontSize="6"
                 fontFamily="monospace">{n.ip}</text>
             </g>
@@ -328,13 +360,24 @@ function TopologyGraph() {
         <line x1={306} y1={116} x2={339} y2={234} stroke={COLORS.border} strokeWidth={0.5} strokeDasharray="3 2" />
         <line x1={306} y1={191} x2={339} y2={234} stroke={COLORS.border} strokeWidth={0.5} strokeDasharray="3 2" />
 
+        {/* IDS Sensor observation lines (dashed, to IT-CORE and PLC-1) */}
+        <line x1={250} y1={252} x2={206} y2={46} stroke={COLORS.accent} strokeWidth={0.8}
+          strokeDasharray="4 3" opacity={0.5} markerEnd="url(#arrowhead-obs)" />
+        <line x1={250} y1={252} x2={306} y2={46} stroke={COLORS.accent} strokeWidth={0.8}
+          strokeDasharray="4 3" opacity={0.5} markerEnd="url(#arrowhead-obs)" />
+        {/* IDS to DC-01 and SCADA observation */}
+        <line x1={250} y1={258} x2={206} y2={111} stroke={COLORS.accent} strokeWidth={0.6}
+          strokeDasharray="4 3" opacity={0.35} />
+        <line x1={250} y1={258} x2={306} y2={116} stroke={COLORS.accent} strokeWidth={0.6}
+          strokeDasharray="4 3" opacity={0.35} />
+
         <style jsx>{`
           .node-pulse-ring {
             transform-origin: center;
-            animation: nodePulse 2s ease-out infinite;
+            animation: nodePulse 2.5s ease-out infinite;
           }
           @keyframes nodePulse {
-            0% { r: 6; opacity: 0.7; }
+            0% { r: 6; opacity: 0.4; }
             100% { r: 16; opacity: 0; }
           }
         `}</style>
@@ -353,7 +396,7 @@ const BAR_SLOT = BAR_W + BAR_GAP;
 const TL_W = 10 * BAR_SLOT + 30;
 const TL_H = 140;
 const BAR_BASE = TL_H - 20;
-const MAX_TOTAL = 24; // roughly max stacked count across buckets
+const MAX_TOTAL = 24;
 
 const sevFill: Record<string, string> = {
   critical: COLORS.critical,
@@ -368,7 +411,7 @@ function TimelineChart() {
   return (
     <div className="panel timeline-panel">
       <div className="panel-header">
-        <span>📊 TIMELINE DE EVENTOS (últimos 50 min)</span>
+        <span>📊 LÍNEA TEMPORAL DE EVENTOS (últimos 50 min)</span>
         <span className="panel-sub">Barras apiladas por severidad</span>
       </div>
       <svg viewBox={`0 0 ${TL_W} ${TL_H}`} className="timeline-svg">
@@ -405,7 +448,7 @@ function TimelineChart() {
               {/* Time label */}
               <text x={x + BAR_W / 2} y={BAR_BASE + 14} textAnchor="middle" fill={COLORS.dim}
                 fontSize="8.5" fontFamily="monospace">{b.time}</text>
-              {/* Now marker on last bucket */}
+              {/* Now marker */}
               {i === timelineBuckets.length - 1 && (
                 <line x1={x + BAR_W + 2} y1={BAR_BASE - (TL_H - 40)} y2={BAR_BASE}
                   stroke={COLORS.accent} strokeWidth={1} strokeDasharray="3 3"
@@ -418,7 +461,8 @@ function TimelineChart() {
       <div className="timeline-legend">
         {sevOrder.map((s) => (
           <span key={s} className="tl-legend-item">
-            <span className="tl-legend-dot" style={{ background: sevFill[s] }} /> {s.toUpperCase()}
+            <span className="tl-legend-dot" style={{ background: sevFill[s] }} />
+            {s === "critical" ? "CRÍTICO" : s === "high" ? "ALTO" : s === "medium" ? "MEDIO" : "BAJO"}
           </span>
         ))}
       </div>
@@ -451,15 +495,20 @@ function InspectorPanel({ event }: { event: MockEvent | null }) {
     return (
       <div className="panel inspector-panel">
         <div className="panel-header">
-          <span>🔍 INSPECTOR DE EVENTOS</span>
+          <span>🔍 INVESTIGACIÓN DE EVENTOS</span>
         </div>
-        <div className="empty-state">Seleccione un evento para inspeccionar</div>
+        <div className="empty-state">Seleccione un evento para investigar</div>
       </div>
     );
   }
 
   const time = new Date(event.timestamp);
   const timeStr = time.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  const asset = assetMap[event.destination.ip] ?? {
+    name: event.destination.ip,
+    zone: event.zone,
+    type: "Activo no catalogado",
+  };
 
   // Mock scoring data
   const factors = [
@@ -476,7 +525,7 @@ function InspectorPanel({ event }: { event: MockEvent | null }) {
   return (
     <div className="panel inspector-panel">
       <div className="panel-header">
-        <span>🔍 INSPECTOR DE EVENTOS</span>
+        <span>🔍 INVESTIGACIÓN DE EVENTOS</span>
         <span className="panel-sub">{event.id}</span>
       </div>
 
@@ -496,7 +545,9 @@ function InspectorPanel({ event }: { event: MockEvent | null }) {
         {/* Severity */}
         <div>
           <span className="ilabel">Severidad</span>
-          <span className={`sev-badge-expanded sev-${event.severity}`}>{event.severity.toUpperCase()}</span>
+          <span className={`sev-badge-expanded sev-${event.severity}`}>
+            {event.severity === "critical" ? "CRÍTICO" : event.severity === "high" ? "ALTO" : event.severity === "medium" ? "MEDIO" : "BAJO"}
+          </span>
         </div>
 
         {/* Type */}
@@ -514,7 +565,7 @@ function InspectorPanel({ event }: { event: MockEvent | null }) {
         {/* Direction */}
         <div>
           <span className="ilabel">Dirección</span>
-          <span>{event.direction}</span>
+          <span>{event.direction === "inbound" ? "Entrante" : event.direction === "outbound" ? "Saliente" : event.direction === "lateral" ? "Lateral" : "Interna"}</span>
         </div>
 
         {/* Zone */}
@@ -542,6 +593,60 @@ function InspectorPanel({ event }: { event: MockEvent | null }) {
         <span className="tag">{event.protocol.toUpperCase()}</span>
         <span className="tag">{event.direction}</span>
         <span className="tag">zona:{event.zone}</span>
+      </div>
+
+      {/* --- NEW: Activo Afectado --- */}
+      <div className="asset-section">
+        <span className="section-label">🎯 Activo Afectado</span>
+        <div className="asset-card">
+          <div className="asset-row">
+            <span className="ilabel">Nombre</span>
+            <span style={{ fontWeight: 600, color: COLORS.accent }}>{asset.name}</span>
+          </div>
+          <div className="asset-row">
+            <span className="ilabel">IP</span>
+            <span className="mono">{event.destination.ip}</span>
+          </div>
+          <div className="asset-row">
+            <span className="ilabel">Zona</span>
+            <span className={`zone-tag zone-${asset.zone}`}>{asset.zone.toUpperCase()}</span>
+          </div>
+          <div className="asset-row">
+            <span className="ilabel">Tipo</span>
+            <span style={{ fontSize: 10, color: COLORS.dim }}>{asset.type}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* --- NEW: Ruta de Ataque --- */}
+      <div className="attack-route-section">
+        <span className="section-label">🗺 Ruta de Ataque</span>
+        <div className="attack-route-viz">
+          <div className="route-node route-src">
+            <span className="route-label">ORIGEN</span>
+            <span className="mono" style={{ fontSize: 9 }}>{event.source.ip}:{event.source.port}</span>
+            <span className={`zone-tag zone-${event.direction === "outbound" ? event.zone : "external"}`}
+              style={{ marginTop: 2 }}>
+              {event.direction === "outbound" ? event.zone.toUpperCase() : "EXT"}
+            </span>
+          </div>
+          <div className="route-arrow">
+            <svg width="60" height="24" viewBox="0 0 60 24">
+              <line x1={0} y1={12} x2={42} y2={12} stroke={COLORS.critical} strokeWidth={1.5}
+                strokeDasharray="4 2" opacity={0.7} />
+              <polygon points="42,6 54,12 42,18" fill={COLORS.critical} opacity={0.9} />
+              <text x={22} y={10} textAnchor="middle" fill={COLORS.dim} fontSize="6"
+                fontFamily="monospace">{event.protocol.toUpperCase()}</text>
+            </svg>
+          </div>
+          <div className="route-node route-dst">
+            <span className="route-label">DESTINO</span>
+            <span className="mono" style={{ fontSize: 9 }}>{event.destination.ip}:{event.destination.port}</span>
+            <span className={`zone-tag zone-${event.zone}`} style={{ marginTop: 2 }}>
+              {event.zone.toUpperCase()}
+            </span>
+          </div>
+        </div>
       </div>
 
       {/* Scoring section */}
@@ -611,6 +716,66 @@ function InspectorPanel({ event }: { event: MockEvent | null }) {
           padding: 2px 6px; background: ${COLORS.bg}; border-radius: 2px;
           font-size: 9px; color: ${COLORS.accent}; font-family: monospace;
         }
+        /* --- Asset Section --- */
+        .asset-section {
+          margin-top: 10px;
+          border-top: 1px solid ${COLORS.border};
+          padding-top: 8px;
+        }
+        .section-label {
+          font-size: 9px;
+          font-weight: 600;
+          color: ${COLORS.dim};
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+          display: block;
+          margin-bottom: 6px;
+        }
+        .asset-card {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 4px 12px;
+          background: ${COLORS.bg};
+          padding: 6px 8px;
+          border-radius: 2px;
+          border: 1px solid ${COLORS.border};
+        }
+        .asset-row {
+          font-size: 10px;
+        }
+        /* --- Attack Route --- */
+        .attack-route-section {
+          margin-top: 8px;
+          border-top: 1px solid ${COLORS.border};
+          padding-top: 8px;
+        }
+        .attack-route-viz {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          background: ${COLORS.bg};
+          padding: 8px;
+          border-radius: 2px;
+          border: 1px solid ${COLORS.border};
+          justify-content: center;
+        }
+        .route-node {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 1px;
+          text-align: center;
+        }
+        .route-label {
+          font-size: 7px;
+          color: ${COLORS.dim};
+          text-transform: uppercase;
+          letter-spacing: 0.06em;
+        }
+        .route-arrow {
+          flex-shrink: 0;
+        }
+        /* --- Score Section --- */
         .score-section {
           margin-top: 12px; border-top: 1px solid ${COLORS.border}; padding-top: 10px;
         }
@@ -638,54 +803,176 @@ function InspectorPanel({ event }: { event: MockEvent | null }) {
 }
 
 // ============================================================
+// iSID DEFENSIVE ACTIONS PANEL
+// ============================================================
+
+function ISIDPanel() {
+  const actions = [
+    { id: "copy-ioc", label: "Copiar IOC", icon: "📋" },
+    { id: "mark-reviewed", label: "Marcar revisado", icon: "✅" },
+    { id: "block-suggest", label: "Recomendar bloqueo", icon: "🚫" },
+    { id: "watchlist", label: "Añadir a vigilancia", icon: "👁" },
+    { id: "open-case", label: "Abrir investigación", icon: "🔍" },
+    { id: "gen-report", label: "Generar informe", icon: "📄" },
+  ];
+
+  return (
+    <div className="isid-bar">
+      <div className="isid-left">
+        <span className="isid-title">🛡 ACCIONES DEFENSIVAS iSID</span>
+        <span className="isid-note">(Simulado — pendiente de backend)</span>
+      </div>
+      <div className="isid-actions">
+        {actions.map((a) => (
+          <button key={a.id} className="isid-btn" disabled title="Simulado / pendiente de backend">
+            <span className="isid-btn-icon">{a.icon}</span>
+            {a.label}
+          </button>
+        ))}
+      </div>
+      <style jsx>{`
+        .isid-bar {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 8px;
+          padding: 5px 10px;
+          background: ${COLORS.panel};
+          border: 1px solid ${COLORS.border};
+          border-radius: 2px;
+          flex-shrink: 0;
+          flex-wrap: wrap;
+        }
+        .isid-left {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          flex-shrink: 0;
+        }
+        .isid-title {
+          font-size: 10px;
+          font-weight: 700;
+          color: ${COLORS.accent};
+          text-transform: uppercase;
+          letter-spacing: 0.04em;
+          white-space: nowrap;
+        }
+        .isid-note {
+          font-size: 8px;
+          color: ${COLORS.dim};
+          font-style: italic;
+          white-space: nowrap;
+        }
+        .isid-actions {
+          display: flex;
+          gap: 5px;
+          flex-wrap: wrap;
+        }
+        .isid-btn {
+          display: inline-flex;
+          align-items: center;
+          gap: 3px;
+          padding: 3px 8px;
+          font-size: 9px;
+          font-family: inherit;
+          color: ${COLORS.dim};
+          background: ${COLORS.bg};
+          border: 1px solid ${COLORS.border};
+          border-radius: 2px;
+          cursor: not-allowed;
+          opacity: 0.6;
+          white-space: nowrap;
+          transition: opacity 0.15s;
+        }
+        .isid-btn:hover {
+          opacity: 0.8;
+        }
+        .isid-btn-icon {
+          font-size: 10px;
+        }
+      `}</style>
+    </div>
+  );
+}
+
+// ============================================================
 // HEADER
 // ============================================================
 
 function Header({ seconds }: { seconds: number }) {
   return (
     <header className="soc-header">
-      <div className="soc-header-left">
-        <div className="soc-logo">
-          <span className="soc-logo-icon">🛡</span>
-          <div>
-            <h1 className="soc-title">IDS OT/IT Command Center</h1>
-            <span className="soc-env">SOC Staging · v2.4.1</span>
+      {/* Row 1: Main header bar */}
+      <div className="soc-header-row1">
+        <div className="soc-header-left">
+          <div className="soc-logo">
+            <span className="soc-logo-icon">🛡</span>
+            <div>
+              <h1 className="soc-title">Centro de Mando IDS OT/IT</h1>
+              <span className="soc-env">SOC Staging · v2.4.1</span>
+            </div>
           </div>
         </div>
-      </div>
 
-      <div className="soc-header-center">
-        {["ids-core", "analytics", "mcp-server", "postgres", "redis"].map((svc) => (
-          <span key={svc} className="soc-svc-badge svc-ok">
-            <span className="svc-dot" />
-            {svc}
-          </span>
-        ))}
-      </div>
-
-      <div className="soc-header-right">
-        <div className="health-led-group">
-          <span className="soc-label">Estado</span>
-          <span className="health-led healthy" />
-          <span style={{ color: COLORS.green, fontSize: 11, fontWeight: 600 }}>OPERATIVO</span>
+        <div className="soc-header-center">
+          {["ids-core", "analytics", "mcp-server", "postgres", "redis"].map((svc) => (
+            <span key={svc} className="soc-svc-badge svc-ok">
+              <span className="svc-dot" />
+              {svc}
+            </span>
+          ))}
         </div>
 
-        <span className="alarm-badge" style={{ margin: "0 10px" }}>
-          ⚠ {12 + (seconds % 5)}
-        </span>
+        <div className="soc-header-right">
+          <div className="health-led-group">
+            <span className="soc-label">Estado</span>
+            <span className="health-led healthy" />
+            <span style={{ color: COLORS.green, fontSize: 11, fontWeight: 600 }}>OPERATIVO</span>
+          </div>
 
-        <span className="updated-ago">Actualizado hace {seconds}s</span>
-        <span style={{ fontSize: 11, color: COLORS.dim }}>
-          {new Date().toLocaleTimeString("es-ES")}
-        </span>
+          <span className="alarm-badge" style={{ margin: "0 10px" }}>
+            ⚠ {12 + (seconds % 5)} Alarmas
+          </span>
+
+          <span className="updated-ago">Actualizado hace {seconds}s</span>
+          <span style={{ fontSize: 11, color: COLORS.dim }}>
+            {new Date().toLocaleTimeString("es-ES")}
+          </span>
+        </div>
+      </div>
+
+      {/* Row 2: Tech capability badges */}
+      <div className="soc-header-row2">
+        <span className="cap-badge cap-suricata">🛡 Suricata: parser EVE JSON preparado</span>
+        <span className="cap-badge cap-mcp">📡 MCP: read-only activo</span>
+        <span className="cap-badge cap-analytics">📊 Analytics: scoring disponible</span>
       </div>
 
       <style jsx>{`
         .soc-header {
-          display: flex; justify-content: space-between; align-items: center;
-          padding: 8px 16px; background: ${COLORS.panel};
-          border: 1px solid ${COLORS.border}; border-radius: 2px;
-          flex-wrap: wrap; gap: 8px; min-height: 48px;
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+          padding: 6px 14px;
+          background: ${COLORS.panel};
+          border: 1px solid ${COLORS.border};
+          border-radius: 2px;
+        }
+        .soc-header-row1 {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          flex-wrap: wrap;
+          gap: 8px;
+          min-height: 40px;
+        }
+        .soc-header-row2 {
+          display: flex;
+          gap: 12px;
+          flex-wrap: wrap;
+          align-items: center;
+          padding: 3px 0 2px;
+          border-top: 1px solid ${COLORS.border};
         }
         .soc-header-left { display: flex; align-items: center; gap: 14px; }
         .soc-logo { display: flex; align-items: center; gap: 10px; }
@@ -718,6 +1005,30 @@ function Header({ seconds }: { seconds: number }) {
           font-family: "JetBrains Mono", "Cascadia Code", "Fira Code", Consolas, monospace;
           font-size: 10px; color: ${COLORS.dim}; white-space: nowrap;
         }
+        /* Tech capability badges */
+        .cap-badge {
+          font-size: 8.5px;
+          font-family: "JetBrains Mono", "Cascadia Code", "Fira Code", Consolas, monospace;
+          padding: 1px 7px;
+          border-radius: 2px;
+          white-space: nowrap;
+          letter-spacing: 0.02em;
+        }
+        .cap-suricata {
+          background: rgba(219,109,40,0.12);
+          color: ${COLORS.ot};
+          border: 1px solid rgba(219,109,40,0.25);
+        }
+        .cap-mcp {
+          background: rgba(63,185,80,0.12);
+          color: ${COLORS.green};
+          border: 1px solid rgba(63,185,80,0.25);
+        }
+        .cap-analytics {
+          background: rgba(88,166,255,0.12);
+          color: ${COLORS.accent};
+          border: 1px solid rgba(88,166,255,0.25);
+        }
       `}</style>
     </header>
   );
@@ -736,6 +1047,13 @@ export default function DesignLabPage() {
     return () => clearInterval(t);
   }, []);
 
+  // Responsive: prevent horizontal overflow on body
+  useEffect(() => {
+    const prev = document.body.style.overflowX;
+    document.body.style.overflowX = "hidden";
+    return () => { document.body.style.overflowX = prev; };
+  }, []);
+
   const selectedEvent = mockEvents.find((e) => e.id === selectedEventId) ?? null;
 
   return (
@@ -744,7 +1062,7 @@ export default function DesignLabPage() {
 
       {/* Row 2: KPIs | Map | Topology */}
       <div className="row-top">
-        {/* KPI Column — 6 cards */}
+        {/* KPI Column */}
         <aside className="kpi-col">
           {kpiData.map((k) => (
             <div key={k.label} className="kpi-card">
@@ -767,6 +1085,9 @@ export default function DesignLabPage() {
         <TopologyGraph />
       </div>
 
+      {/* iSID Defensive Actions Bar */}
+      <ISIDPanel />
+
       {/* Row 3: Timeline full width */}
       <TimelineChart />
 
@@ -783,9 +1104,9 @@ export default function DesignLabPage() {
               <thead>
                 <tr>
                   <th style={{ width: 50 }}>Hora</th>
-                  <th style={{ width: 65 }}>Severidad</th>
+                  <th style={{ width: 70 }}>Severidad</th>
                   <th>Título</th>
-                  <th style={{ width: 75 }}>Tipo</th>
+                  <th style={{ width: 80 }}>Tipo</th>
                   <th style={{ width: 80 }}>Protocolo</th>
                   <th style={{ width: 170 }}>Origen</th>
                   <th style={{ width: 170 }}>Destino</th>
@@ -796,6 +1117,7 @@ export default function DesignLabPage() {
                 {mockEvents.map((e) => {
                   const t = new Date(e.timestamp);
                   const isSel = e.id === selectedEventId;
+                  const sevLabel = e.severity === "critical" ? "CRÍTICO" : e.severity === "high" ? "ALTO" : e.severity === "medium" ? "MEDIO" : "BAJO";
                   return (
                     <tr key={e.id}
                       className={`event-row sev-${e.severity}-row ${isSel ? "selected" : ""}`}
@@ -804,7 +1126,7 @@ export default function DesignLabPage() {
                         {t.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
                       </td>
                       <td>
-                        <span className={`sev-badge-expanded sev-${e.severity}`}>{e.severity.toUpperCase()}</span>
+                        <span className={`sev-badge-expanded sev-${e.severity}`}>{sevLabel}</span>
                       </td>
                       <td className="cell-title">{e.title}</td>
                       <td className="cell-mono" style={{ fontSize: 9 }}>{e.type}</td>
@@ -830,7 +1152,7 @@ export default function DesignLabPage() {
            ============================================================ */
 
         .design-lab-root {
-          max-width: 1920px;
+          max-width: 100vw;
           height: 100vh;
           margin: 0 auto;
           padding: 8px;
@@ -1000,6 +1322,53 @@ export default function DesignLabPage() {
         .zone-dmz { background: rgba(210,153,34,0.15); color: ${COLORS.high}; }
         .zone-it { background: rgba(88,166,255,0.15); color: ${COLORS.accent}; }
         .zone-ot { background: rgba(219,109,40,0.15); color: ${COLORS.ot}; }
+
+        /* === Responsive adjustments === */
+        @media (max-width: 1100px) {
+          .row-top {
+            grid-template-columns: 1fr;
+          }
+          .kpi-col {
+            flex-direction: row;
+            flex-wrap: wrap;
+          }
+          .kpi-card {
+            flex: 1 1 100px;
+            min-width: 100px;
+          }
+          .row-bottom {
+            grid-template-columns: 1fr;
+          }
+        }
+        @media (max-width: 700px) {
+          .design-lab-root {
+            padding: 4px;
+            gap: 4px;
+          }
+          .kpi-card {
+            padding: 4px 6px;
+          }
+          .kpi-value {
+            font-size: 20px;
+          }
+          .row-top {
+            grid-template-columns: 1fr;
+          }
+          .row-bottom {
+            grid-template-columns: 1fr;
+          }
+          .soc-header-row1 {
+            flex-direction: column;
+            align-items: flex-start;
+          }
+          .soc-header-row2 {
+            flex-direction: column;
+            align-items: flex-start;
+          }
+          .inspector-grid {
+            grid-template-columns: 1fr;
+          }
+        }
       `}</style>
     </div>
   );
