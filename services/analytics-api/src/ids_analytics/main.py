@@ -1,19 +1,18 @@
-from fastapi import FastAPI
-from pydantic import BaseModel
+from fastapi import FastAPI, HTTPException
+
+from ids_analytics.models import (
+    BatchScoreRequest,
+    BatchScoreResponse,
+    Event,
+    HealthResponse,
+    ScoreResponse,
+    StatusResponse,
+)
+from ids_analytics.scoring import score_event
 
 app = FastAPI(title="Analytics API", version="0.1.0")
 
-
-class StatusResponse(BaseModel):
-    service: str
-    status: str
-    mode: str
-    version: str
-
-
-class HealthResponse(BaseModel):
-    service: str
-    status: str
+MAX_BATCH = 100
 
 
 @app.get("/healthz")
@@ -28,4 +27,23 @@ def status():
         status="ok",
         mode="development",
         version="0.1.0",
+        capabilities=["event_scoring", "risk_explanation", "recommendations"],
     )
+
+
+@app.post("/api/v1/score/event", response_model=ScoreResponse)
+def score_single(event: Event):
+    return score_event(event)
+
+
+@app.post("/api/v1/score/events", response_model=BatchScoreResponse)
+def score_batch(request: BatchScoreRequest):
+    if not request.items:
+        raise HTTPException(status_code=400, detail="items list is empty")
+    if len(request.items) > MAX_BATCH:
+        raise HTTPException(
+            status_code=400,
+            detail=f"batch size exceeds maximum of {MAX_BATCH}",
+        )
+    results = [score_event(evt) for evt in request.items]
+    return BatchScoreResponse(items=results, count=len(results))

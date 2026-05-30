@@ -22,5 +22,6 @@ target-version = "py310"
 
 [dependency-groups]
 dev = [
+    "httpx>=0.28.1",
     "pytest>=9.0.3",
 ]
