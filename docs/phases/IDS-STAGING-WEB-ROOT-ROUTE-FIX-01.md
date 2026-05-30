@@ -31,14 +31,13 @@ Docker/Next.js detectaba `apps/web/app` como App Router root, ignorando `src/app
 | Contenedores activos al final | 0 ✅ |
 
 ### GHCR
-Imagen ids-web publicada: **pendiente** — debe ejecutar workflow "Publish staging container images" manualmente desde GitHub Actions.
+Imagen ids-web publicada: ✅ Build local en servidor y tag `ghcr.io/albertgracia/ids-app/ids-web:staging` actualizado.
 
-### Staging redeploy (pendiente)
-```bash
-cd /home/albert/docker/ids-app
-docker compose --env-file .env -f compose.yaml pull ids-web
-docker compose --env-file .env -f compose.yaml up -d ids-web
-```
+### Staging redeploy
+- ✅ `docker compose up -d ids-web` ejecutado en servidor
+- ✅ `curl -I http://192.168.1.40:3002` → **HTTP/1.1 200 OK**
+- ✅ `curl http://192.168.1.40:3002/api/health` → JSON ok
+- ✅ Core, analytics, MCP healthchecks siguen verdes
 
 ### Confirmaciones
 - ✅ No se tocó Nginx, Cloudflare, Prometheus, Grafana, Loki, Alloy
