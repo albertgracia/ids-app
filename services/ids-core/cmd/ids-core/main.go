@@ -9,6 +9,9 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
+
+	"github.com/albertgracia/ids-app/services/ids-core/internal/api"
+	"github.com/albertgracia/ids-app/services/ids-core/internal/ingest"
 )
 
 type statusResponse struct {
@@ -35,10 +38,16 @@ func main() {
 		port = "8088"
 	}
 
+	store := ingest.NewEventStore(5000)
+	simulator := ingest.NewSimulator(store)
+	handler := api.NewEventHandler(store, simulator)
+
 	mux := http.NewServeMux()
 	mux.HandleFunc("/healthz", handleHealthz)
 	mux.HandleFunc("/readyz", handleReadyz)
 	mux.HandleFunc("/api/v1/status", handleStatus)
+	mux.HandleFunc("/api/v1/events/recent", handler.HandleRecentEvents)
+	mux.HandleFunc("/api/v1/simulate/events", handler.HandleSimulateEvents)
 
 	server := &http.Server{
 		Addr:    ":" + port,
@@ -79,6 +88,6 @@ func handleStatus(w http.ResponseWriter, r *http.Request) {
 		Status:       "ok",
 		Mode:         "development",
 		Version:      "0.1.0",
-		Capabilities: []string{"event_model", "asset_inventory_model"},
+		Capabilities: []string{"event_model", "asset_inventory_model", "simulated_ingest"},
 	})
 }
