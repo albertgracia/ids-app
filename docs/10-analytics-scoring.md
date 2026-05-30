@@ -107,6 +107,10 @@ No destructive actions are recommended.
 
 The scoring engine accepts events in the ids-core normalized format. Future Suricata EVE JSON events will be mapped to this same format before scoring. No parser is implemented yet.
 
+## Suricata Integration
+
+Analytics scoring is designed for normalized `domain.Event` objects. Future Suricata EVE JSON events will be mapped to `domain.Event` (see `docs/11-suricata-eve-json-integration.md`) before scoring. No scoring is applied directly to raw EVE JSON.
+
 ## Limitations
 
 - No ML or AI

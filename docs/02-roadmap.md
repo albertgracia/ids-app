@@ -12,66 +12,78 @@
 - [x] Git repository initialization
 - **Status:** PASS
 
-## Phase 2 — OBS-SERVER-IDS-READINESS-01 ⬜
-- [ ] Prepare staging server (192.168.1.40)
-- [ ] Install required tools
-- [ ] Configure Docker on server
-- [ ] Set up reverse proxy (if needed)
-- [ ] Configure basic monitoring
-- [ ] Test deployment pipeline
+## Phase 2 — OBS-SERVER-IDS-READINESS-01 ✅
+- [x] Audit server 192.168.1.40
+- [x] Identify ports, resources, risks
+- [x] Confirm staging feasibility
+- **Status:** PASS
 
-## Phase 3 — IDS-CORE-EVENT-MODEL-01 ⬜
-- [ ] Define core event data model
-- [ ] Define asset data model
-- [ ] Define alert data model
-- [ ] Implement event storage (PostgreSQL)
-- [ ] Implement event API endpoints
-- [ ] Add event validation with Pydantic/Go structs
-- [ ] Add OpenAPI schema for events
+## Phase 3 — IDS-CORE-EVENT-MODEL-01 ✅
+- [x] Core event data model (Event, Endpoint, enums)
+- [x] Validation and JSON serialization
+- [x] Unit tests (13)
+- **Status:** PASS
 
-## Phase 4 — IDS-CORE-ASSET-INVENTORY-01 ⬜
-- [ ] Implement asset discovery logic
-- [ ] Implement asset storage
-- [ ] Implement asset API endpoints
-- [ ] Add asset fingerprinting (OT protocols)
-- [ ] Asset lifecycle management
+## Phase 4 — IDS-CORE-ASSET-INVENTORY-01 ✅
+- [x] Asset data model (Asset, enums, helpers)
+- [x] Validation and JSON serialization
+- [x] Unit tests (21)
+- **Status:** PASS
 
-## Phase 5 — IDS-SIMULATED-INGEST-01 ⬜
-- [ ] Build event simulator service
-- [ ] Generate realistic OT/IT traffic patterns
-- [ ] Test ingestion pipeline end-to-end
-- [ ] Validate event processing
+## Phase 5 — IDS-SIMULATED-INGEST-01 ✅
+- [x] EventStore in memory (thread-safe, FIFO)
+- [x] Simulator with 7 OT/IT scenarios
+- [x] API endpoints (GET recent, POST simulate)
+- [x] Unit tests (12)
+- **Status:** PASS
 
-## Phase 6 — IDS-CONSOLE-DASHBOARD-MVP-01 ⬜
-- [ ] Design main dashboard layout
-- [ ] Real-time event stream component
-- [ ] Asset inventory view
-- [ ] Network topology visualization
-- [ ] Basic alert list
-- [ ] Status indicators for all services
+## Phase 6 — IDS-CORE-PERSISTENCE-POSTGRES-01 ✅
+- [x] EventRepository interface (memory + postgres)
+- [x] PostgreSQL schema + indexes
+- [x] pgx/v5 integration
+- [x] Tests (8 storage)
+- **Status:** PASS
 
-## Phase 7 — IDS-ANALYTICS-SCORING-01 ⬜
-- [ ] Implement baseline learning
-- [ ] Implement anomaly scoring
-- [ ] Implement alert generation
-- [ ] Add reporting endpoints
-- [ ] Integrate with ids-core
+## Phase 7 — IDS-CONSOLE-DASHBOARD-MVP-01 ✅
+- [x] Dashboard with status, events, simulation
+- [x] Components (CoreStatusCard, EventTable, etc.)
+- [x] CORS middleware for dev
+- **Status:** PASS
 
-## Phase 8 — IDS-MCP-READONLY-01 ⬜
+## Phase 8 — IDS-ANALYTICS-SCORING-01 ✅
+- [x] Deterministic scoring engine (11 rules)
+- [x] Score/event and score/events endpoints
+- [x] Factors and recommendations
+- [x] Tests (16 unit + API)
+- **Status:** PASS
+
+## Phase 9 — IDS-SENSOR-SURICATA-EVE-JSON-RESEARCH-01 ✅
+- [x] Suricata integration research
+- [x] EVE JSON mapping specification
+- [x] Deployment options
+- [x] Risk and security rules
+- **Status:** PASS
+
+## Phase 10 — IDS-MCP-READONLY-INTEGRATION-01 ⬜
 - [ ] Expand MCP tools for events
 - [ ] Expand MCP tools for assets
 - [ ] Add explain_alert tool
 - [ ] Add generate_report tool
 - [ ] Test MCP integration with OpenCode
 
-## Phase 9 — IDS-STAGING-DEPLOY-OBS-SERVER-01 ⬜
+## Phase 11 — IDS-STAGING-DEPLOY-OBS-SERVER-01 ⬜
 - [ ] Full deployment to 192.168.1.40
 - [ ] End-to-end testing on staging
 - [ ] Performance benchmarking
 - [ ] Document deployment procedure
 
-## Phase 10 — IDS-SENSOR-SURICATA-ZEEK-RESEARCH-01 ⬜
-- [ ] Research Suricata/Zeek integration
-- [ ] Design sensor architecture
-- [ ] Prototype sensor pipeline
-- [ ] Evaluate SPAN/mirror requirements
+## Future Sensor Phases (Suricata)
+
+| Phase | Description |
+|-------|-------------|
+| `IDS-SENSOR-SURICATA-EVE-SAMPLE-CONTRACT-01` | Define sample EVE JSON structures and test contracts |
+| `IDS-SENSOR-SURICATA-EVE-PARSER-01` | Implement EVE JSON parser/normalizer |
+| `IDS-SENSOR-SURICATA-EVE-INGEST-01` | Integrate parser with ids-core ingest pipeline |
+| `IDS-SENSOR-SURICATA-LAB-DEPLOY-01` | Deploy Suricata in lab/VM for testing |
+| `IDS-SENSOR-SURICATA-SPAN-MIRROR-PLAN-01` | Plan SPAN/mirror port deployment |
+| `IDS-SENSOR-SURICATA-RULES-GOVERNANCE-01` | Rule management, updates, and tuning policy |

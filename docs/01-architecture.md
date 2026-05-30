@@ -76,8 +76,37 @@
 - Pub/sub for real-time event distribution.
 - Session store (future).
 
+## Future Suricata Sensor Integration
+
+```
+Network TAP / SPAN / Mirror
+        │
+        ▼
+Suricata Sensor (dedicated HW or VM)
+        │
+        ▼  eve.json
+ids-suricata-ingest (future service)
+        │
+        ▼  normalized domain.Event
+ids-core
+        │
+        ├──► PostgreSQL
+        ├──► analytics-api scoring
+        └──► Next.js console / MCP
+```
+
+Suricata will be deployed as a **separate sensor** (dedicated hardware or VM) with SPAN/mirror port access to the target network. It writes EVE JSON events which a future ingest service reads, normalizes to `domain.Event`, and sends to ids-core.
+
+The sensor is intentionally separated from the central platform to:
+- Avoid resource contention with observability stack
+- Allow placement close to monitored networks
+- Enable multiple sensors for different network segments
+- Keep the central platform agnostic of the capture method
+
+See `docs/11-suricata-eve-json-integration.md` for full specification.
+
 ## Deployment
 
 - Development: Docker Compose local.
 - Staging: Server 192.168.1.40 (future phase).
-- Sensors: Separate from central platform (future research).
+- Sensors: Separate from central platform — see Suricata integration doc.
