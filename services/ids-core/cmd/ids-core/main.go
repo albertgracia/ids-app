@@ -22,10 +22,11 @@ type readyResponse struct {
 }
 
 type serviceStatus struct {
-	Service string `json:"service"`
-	Status  string `json:"status"`
-	Mode    string `json:"mode"`
-	Version string `json:"version"`
+	Service      string   `json:"service"`
+	Status       string   `json:"status"`
+	Mode         string   `json:"mode"`
+	Version      string   `json:"version"`
+	Capabilities []string `json:"capabilities"`
 }
 
 func main() {
@@ -74,9 +75,10 @@ func handleReadyz(w http.ResponseWriter, r *http.Request) {
 func handleStatus(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(serviceStatus{
-		Service: "ids-core",
-		Status:  "ok",
-		Mode:    "development",
-		Version: "0.1.0",
+		Service:      "ids-core",
+		Status:       "ok",
+		Mode:         "development",
+		Version:      "0.1.0",
+		Capabilities: []string{"event_model"},
 	})
 }
