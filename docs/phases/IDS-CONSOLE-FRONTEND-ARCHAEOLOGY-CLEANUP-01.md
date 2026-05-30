@@ -8,39 +8,41 @@
 
 ## RESULTADO: PASS
 
-### Diagnóstico arqueológico
-El frontend arrastraba deuda de iteraciones rápidas: componentes cadáver, lógica duplicada en 3 archivos, y archivos de fases pre-SOC sin usar.
+### Componentes eliminados (9, verificado 0 referencias)
+| Archivo | Motivo |
+|---------|--------|
+| `soc/NetworkTopologyPanel.tsx` | SVG estático, reemplazado por TopologyGraph |
+| `soc/AttackMapPanel.tsx` | Cajas con contadores, reemplazado por AttackWorldMap |
+| `AnalyticsStatusCard.tsx` | Reemplazado por SocHeader badges |
+| `CoreStatusCard.tsx` | Reemplazado por SocHeader badges |
+| `EventDetailsPanel.tsx` | Reemplazado por EventInspectorPanel |
+| `EventScorePanel.tsx` | Scoring integrado en EventInspectorPanel |
+| `EventTable.tsx` | Reemplazado por RecentEventsPanel |
+| `SeveritySummary.tsx` | Reemplazado por barras inline en page.tsx |
+| `SimulationPanel.tsx` | No usado en dashboard SOC |
 
-### Eliminado (9 archivos muertos, 0 referencias)
-- `soc/NetworkTopologyPanel.tsx` — SVG estático reemplazado por `TopologyGraph`
-- `soc/AttackMapPanel.tsx` — cajas con contadores, reemplazado por `AttackWorldMap`
-- `AnalyticsStatusCard.tsx` — reemplazado por `SocHeader` badges
-- `CoreStatusCard.tsx` — reemplazado por `SocHeader` badges
-- `EventDetailsPanel.tsx` — reemplazado por `EventInspectorPanel`
-- `EventScorePanel.tsx` — scoring integrado en `EventInspectorPanel`
-- `EventTable.tsx` — reemplazado por `RecentEventsPanel`
-- `SeveritySummary.tsx` — reemplazado por barras inline en page.tsx
-- `SimulationPanel.tsx` — no usado en dashboard SOC
+### Utilidades centralizadas (2 archivos)
+| Archivo | Contenido |
+|---------|-----------|
+| `src/lib/soc-utils.ts` | ZONES, SEV_COLORS, ZONE_COLORS, SEV_LABELS, ZONE_LABELS, inferZone(), classifyEventZone() |
+| `src/lib/soc-labels.ts` | Objeto `L` con 100+ labels en español (headers, KPIs, paneles, eventos, scoring, assets, IoCs) |
 
-### Centralizado (1 nuevo archivo)
-`src/lib/soc-utils.ts`:
-- `ZONES`, `SEV_COLORS`, `ZONE_COLORS` — constantes compartidas
-- `SEV_LABELS`, `ZONE_LABELS`, `L` — labels en español
-- `inferZone()` — clasificación de zona unificada
-- `classifyEventZone()` — clasificación a nivel evento
+### Componentes actualizados para usar shared utils
+- `AttackWorldMap.tsx` → importa ZONES, SEV_COLORS, classifyEventZone
+- `TopologyGraph.tsx` → importa ZONES, ZONE_COLORS, SEV_COLORS, inferZone, L
+- `AssetIntelligencePanel.tsx` → importa inferZone
 
-### Staging
-```
-http://192.168.1.40:3002 → HTTP 200 ✅
-6 contenedores healthy ✅
-```
+### App Router
+- ✅ `apps/web/src/app/page.tsx` existe
+- ✅ `apps/web/src/app/api/health/route.ts` existe  
+- ✅ `apps/web/app/` NO existe
+
+### Staging: dashboard HTTP 200, 6 contenedores healthy
 
 ### Deuda restante
-- CSS-in-JS en page.tsx (pending extraer a módulo)
+- CSS-in-JS en page.tsx (pending extraer)
 - Polling cada 15s sin race condition guard
-- Las recomendaciones de scoring siguen en inglés (vienen de analytics-api)
+- Recomendaciones de scoring en inglés (analytics-api)
 
-### Confirmaciones
-- ✅ Sin nuevas dependencias
-- ✅ Sin tocar backend/DB/observabilidad
-- ✅ Sin contenedores temporales
+### Próxima fase
+`IDS-CONSOLE-SOC-LIVE-RESPONSIVE-REWORK-03`
