@@ -26,9 +26,13 @@ export default function SocHeader({
   highCount,
 }: Props) {
   const [secondsAgo, setSecondsAgo] = useState(0);
+  const [timeStr, setTimeStr] = useState("");
 
   useEffect(() => {
-    const tick = () => setSecondsAgo(Math.floor((Date.now() - lastUpdated.getTime()) / 1000));
+    const tick = () => {
+      setSecondsAgo(Math.floor((Date.now() - lastUpdated.getTime()) / 1000));
+      setTimeStr(new Date().toLocaleTimeString("es-ES"));
+    };
     tick();
     const id = setInterval(tick, 1000);
     return () => clearInterval(id);
@@ -42,7 +46,7 @@ export default function SocHeader({
   }, [coreStatus, coreError, criticalCount, highCount]);
 
   const healthLabel =
-    healthLed === "healthy" ? "OK" : healthLed === "warning" ? "ATEN" : "CRIT";
+    healthLed === "healthy" ? "OPERATIVO" : healthLed === "warning" ? "DEGRADADO" : "CRÍTICO";
 
   const services = [
     { name: L.services.core, ok: !!coreStatus && !coreError },
@@ -51,56 +55,66 @@ export default function SocHeader({
     { name: L.services.web, ok: true },
   ];
 
-  const unreviewed =
-    criticalCount > 0
-      ? `${criticalCount} cr\u00EDtico${criticalCount > 1 ? "s" : ""}`
-      : highCount > 0
-        ? `${highCount} alto${highCount > 1 ? "s" : ""}`
-        : null;
+  const totalAlarms = criticalCount + highCount;
 
   return (
     <header className="soc-header">
-      <div className="soc-header-left">
-        <div className="soc-logo">
-          <span className="soc-logo-icon">&#x25C8;</span>
-          <div>
-            <h1 className="soc-title">{L.header.title}</h1>
-            <span className="soc-env">{L.header.env}</span>
+      {/* Row 1: Main header bar */}
+      <div className="soc-header-top">
+        <div className="soc-header-left">
+          <div className="soc-logo">
+            <span className="soc-logo-icon">&#x1F6E1;</span>
+            <div>
+              <h1 className="soc-title">{L.header.title}</h1>
+              <span className="soc-env">{L.header.env} · v2.4.1</span>
+            </div>
           </div>
         </div>
 
-        <div className="health-led-group">
-          <span className={`health-led ${healthLed}`} title={`Estado global: ${healthLabel}`} />
-          <span className="soc-label" style={{ fontSize: "0.65rem" }}>
-            {healthLabel}
-          </span>
+        <div className="soc-header-center">
+          {services.map((s) => (
+            <span key={s.name} className={`soc-svc-badge ${s.ok ? "svc-ok" : "svc-down"}`}>
+              <span className="svc-dot" /> {s.name}
+            </span>
+          ))}
         </div>
 
-        {unreviewed && (
-          <span className={`alarm-badge ${healthLed === "critical" ? "" : "warn"}`}>
-            &#x26A0; {unreviewed} sin revisar
+        <div className="soc-header-right">
+          <div className="health-led-group">
+            <span className="soc-label">Estado</span>
+            <span className={`health-led ${healthLed}`} />
+            <span className="soc-health-label">{healthLabel}</span>
+          </div>
+
+          {totalAlarms > 0 && (
+            <span className={`alarm-badge ${healthLed === "warning" ? "warn" : ""}`}>
+              &#x26A0; {totalAlarms} Alarma{totalAlarms > 1 ? "s" : ""}
+            </span>
+          )}
+
+          <span className="updated-ago">
+            hace {secondsAgo < 60 ? `${secondsAgo}s` : `${Math.floor(secondsAgo / 60)}m`}
           </span>
-        )}
+
+          <span className="soc-header-time">{timeStr}</span>
+        </div>
       </div>
 
-      <div className="soc-header-center">
-        {services.map((s) => (
-          <span key={s.name} className={`soc-svc-badge ${s.ok ? "svc-ok" : "svc-down"}`}>
-            <span className="svc-dot" /> {s.name}
-          </span>
-        ))}
-      </div>
-
-      <div className="soc-header-right">
-        <span className="soc-label">{L.header.updated}</span>
-        <span className="updated-ago">
-          hace {secondsAgo < 60 ? `${secondsAgo}s` : `${Math.floor(secondsAgo / 60)}m`}
+      {/* Row 2: Tech capability badges */}
+      <div className="soc-header-row2">
+        <span className="cap-badge cap-suricata">
+          &#x1F6E1; Suricata: parser EVE JSON preparado
+        </span>
+        <span className="cap-badge cap-mcp">
+          &#x1F4E1; MCP: read-only activo
+        </span>
+        <span className="cap-badge cap-analytics">
+          &#x1F4CA; Analytics: scoring disponible
         </span>
         {coreStatus && (
-          <>
-            <span className="soc-label">{L.header.storage}</span>
-            <span className="soc-value">{coreStatus.storage_mode}</span>
-          </>
+          <span className="cap-badge cap-analytics">
+            Almacenamiento: {coreStatus.storage_mode}
+          </span>
         )}
       </div>
     </header>

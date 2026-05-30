@@ -15,6 +15,7 @@ import EventInspectorPanel from "@/components/soc/EventInspectorPanel";
 import AssetIntelligencePanel from "@/components/soc/AssetIntelligencePanel";
 import IocThreatPanel from "@/components/soc/IocThreatPanel";
 import ThreatRadarGrid from "@/components/soc/ThreatRadarGrid";
+import IsidDefensiveBar from "@/components/soc/IsidDefensiveBar";
 
 const SEV_KEYS = ["critical", "high", "medium", "low", "info"] as const;
 
@@ -149,21 +150,22 @@ export default function Home() {
         highCount={highCount}
       />
 
-      {/* Row 2: KPIs — 7 */}
-      <ExecutiveKpiStrip events={events} coreStatus={coreStatus} />
-
-      {/* Row 3: World Threat Map (60%) | Topology Graph (40%) */}
-      <div className="soc-row-6040">
+      {/* Row 2: KPIs (vertical sidebar) | World Threat Map | Topology Graph */}
+      <div className="soc-row-top">
+        <ExecutiveKpiStrip events={events} coreStatus={coreStatus} vertical />
         <AttackWorldMap events={events} />
         <TopologyGraph events={events} />
       </div>
+
+      {/* Row 3: iSID Defensive Actions Bar */}
+      <IsidDefensiveBar />
 
       {/* Row 4: Event Timeline (full width) */}
       <div className="soc-row-full">
         <EventTimelinePanel events={events} />
       </div>
 
-      {/* Row 5: Radar | Assets | IoCs | Severity Distribution */}
+      {/* Row 5: Radar | Assets | IoCs | Severity Distribution (4-col) */}
       <div className="soc-row-4col">
         <ThreatRadarGrid events={events} />
         <AssetIntelligencePanel events={events} />
@@ -200,17 +202,13 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Row 6: Recent Events (full width) */}
-      <div className="soc-row-full">
+      {/* Row 6: Recent Events | Event Inspector (2-col) */}
+      <div className="soc-row-bottom">
         <RecentEventsPanel
           events={events}
           selectedId={selectedEvent?.id ?? null}
           onSelect={handleSelect}
         />
-      </div>
-
-      {/* Row 7: Event Inspector (full width, always visible — shows placeholder when no event) */}
-      <div className="soc-row-full">
         <EventInspectorPanel
           event={selectedEvent}
           score={score}

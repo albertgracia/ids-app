@@ -7,6 +7,7 @@ import { L } from "@/lib/soc-labels";
 interface Props {
   events: EventItem[];
   coreStatus: CoreStatus | null;
+  vertical?: boolean;
 }
 
 function severityCounts(events: EventItem[]) {
@@ -27,7 +28,7 @@ function severityCounts(events: EventItem[]) {
   return { sev, ot, it, total, riskScore };
 }
 
-export default function ExecutiveKpiStrip({ events, coreStatus }: Props) {
+export default function ExecutiveKpiStrip({ events, coreStatus, vertical }: Props) {
   const { sev, ot, it, total, riskScore } = severityCounts(events);
 
   const prevRef = useRef<Record<string, number>>({});
@@ -61,59 +62,41 @@ export default function ExecutiveKpiStrip({ events, coreStatus }: Props) {
     }
   });
 
-  const svcCount = coreStatus?.capabilities?.length ?? 0;
+  const riskTrend =
+    riskScore >= 70 ? "ALTO" : riskScore >= 40 ? "MED" : "BAJO";
+  const riskColor =
+    riskScore >= 70
+      ? "var(--critical)"
+      : riskScore >= 40
+        ? "var(--high)"
+        : riskScore >= 20
+          ? "var(--medium)"
+          : "var(--ok)";
+
+  const cards = [
+    { key: "total", label: L.kpi.totalEvents, value: total, color: undefined, trend: undefined },
+    { key: "critical", label: L.kpi.critical, value: sev.critical, color: "var(--critical)", trend: undefined },
+    { key: "high", label: L.kpi.high, value: sev.high, color: "var(--high)", trend: undefined },
+    { key: "medium", label: L.kpi.medium, value: sev.medium, color: "var(--medium)", trend: undefined },
+    { key: "ot", label: L.kpi.otEvents, value: ot, color: undefined, trend: undefined },
+    { key: "it", label: L.kpi.itEvents, value: it, color: undefined, trend: undefined },
+    { key: "riskScore", label: L.kpi.riskScore, value: riskScore, color: riskColor, trend: riskTrend },
+  ];
+
+  const containerClass = vertical ? "kpi-sidebar" : "kpi-strip";
 
   return (
-    <div className="kpi-strip">
-      <KpiCard
-        label={L.kpi.totalEvents}
-        value={total}
-        flashing={flashKeys.has("total")}
-      />
-      <KpiCard
-        label={L.kpi.critical}
-        value={sev.critical}
-        color="var(--critical)"
-        critical
-        flashing={flashKeys.has("critical")}
-      />
-      <KpiCard
-        label={L.kpi.high}
-        value={sev.high}
-        color="var(--high)"
-        flashing={flashKeys.has("high")}
-      />
-      <KpiCard
-        label={L.kpi.medium}
-        value={sev.medium}
-        color="var(--medium)"
-        flashing={flashKeys.has("medium")}
-      />
-      <KpiCard
-        label={L.kpi.otEvents}
-        value={ot}
-        flashing={flashKeys.has("ot")}
-      />
-      <KpiCard
-        label={L.kpi.itEvents}
-        value={it}
-        flashing={flashKeys.has("it")}
-      />
-      <KpiCard
-        label={L.kpi.riskScore}
-        value={riskScore}
-        suffix={riskScore >= 70 ? "ALTO" : riskScore >= 40 ? "MED" : "BAJO"}
-        color={
-          riskScore >= 70
-            ? "var(--critical)"
-            : riskScore >= 40
-              ? "var(--high)"
-              : riskScore >= 20
-                ? "var(--medium)"
-                : "var(--ok)"
-        }
-        flashing={flashKeys.has("riskScore")}
-      />
+    <div className={containerClass}>
+      {cards.map((c) => (
+        <KpiCard
+          key={c.key}
+          label={c.label}
+          value={c.value}
+          color={c.color}
+          trend={c.trend}
+          flashing={flashKeys.has(c.key)}
+        />
+      ))}
     </div>
   );
 }
@@ -122,19 +105,18 @@ function KpiCard({
   label,
   value,
   color,
-  suffix,
-  critical,
+  trend,
   flashing,
 }: {
   label: string;
   value: number;
   color?: string;
-  critical?: boolean;
-  suffix?: string;
+  trend?: string;
   flashing?: boolean;
 }) {
+  const isCritical = color === "var(--critical)";
   const flashClass = flashing
-    ? critical
+    ? isCritical
       ? "flash-critical"
       : "flash-high"
     : "";
@@ -143,11 +125,11 @@ function KpiCard({
     <div className={`kpi-card ${flashClass}`}>
       <div className="kpi-value-row">
         <span
-          className={`kpi-value ${critical ? "kpi-critical" : ""}`}
-          style={color && !critical ? { color } : undefined}
+          className={`kpi-value ${isCritical ? "kpi-critical" : ""}`}
+          style={color && !isCritical ? { color } : undefined}
         >
           {value}
-          {suffix ? <small> {suffix}</small> : null}
+          {trend ? <small> {trend}</small> : null}
         </span>
       </div>
       <div className="kpi-label">{label}</div>
