@@ -16,10 +16,10 @@ const SEV_COLORS: Record<string, string> = {
   info: "#6e7b8c",
 };
 const ZONE_LABELS: Record<string, string> = {
-  external: "\u{1F310} Externo",
-  dmz: "\u{1F6E1} DMZ",
-  it: "\u{1F4BB} IT",
-  ot: "\u{2699} OT",
+  external: "External",
+  dmz: "DMZ",
+  it: "IT",
+  ot: "OT",
 };
 
 function classifyZone(e: EventItem): string {
@@ -48,12 +48,12 @@ export default function AttackWorldMap({ events }: Props) {
     }
   }
 
-  const edgePairs: { from: (typeof ZONES)[number]; to: (typeof ZONES)[number]; count: number; sev: string }[] = [];
+  const edgePairs: { from: typeof ZONES[number]; to: typeof ZONES[number]; count: number; sev: string }[] = [];
   for (let i = 0; i < ZONES.length - 1; i++) {
     const from = ZONES[i];
     const to = ZONES[i + 1];
     let count = 0;
-    const sevCounts: Record<string, number> = {};
+    let sevCounts: Record<string, number> = {};
     for (const e of events) {
       const z = classifyZone(e);
       if (z === from || z === to) {
@@ -70,19 +70,19 @@ export default function AttackWorldMap({ events }: Props) {
   const CELL_W = 70;
   const CELL_H = 28;
   const GAP = 4;
-  const PAD_LEFT = 100;
+  const PAD_LEFT = 80;
   const PAD_TOP = 30;
   const COL_GAP = 30;
   const svgH = PAD_TOP + SEVERITIES.length * (CELL_H + GAP) + 60;
 
   return (
     <div className="panel awm-panel">
-      <div className="panel-header">Mapa táctico</div>
+      <div className="panel-header">Attack Surface Map</div>
       <svg
         viewBox={`0 0 ${PAD_LEFT + ZONES.length * CELL_W + (ZONES.length - 1) * COL_GAP + 20} ${svgH}`}
         className="awm-svg"
         role="img"
-        aria-label="Mapa de superficie de ataque mostrando amenazas por zona y severidad"
+        aria-label="Attack surface heatmap showing threats per zone and severity"
       >
         {SEVERITIES.map((sev, si) => (
           <text
@@ -94,7 +94,7 @@ export default function AttackWorldMap({ events }: Props) {
             fontSize={9}
             fontWeight={600}
           >
-            {sev === "critical" ? "Crítico" : sev === "high" ? "Alto" : sev === "medium" ? "Medio" : sev === "low" ? "Bajo" : "Info"}
+            {sev.toUpperCase()}
           </text>
         ))}
 
@@ -152,7 +152,6 @@ export default function AttackWorldMap({ events }: Props) {
           const toX = PAD_LEFT + ZONES.indexOf(ep.to) * (CELL_W + COL_GAP);
           const y = PAD_TOP + SEVERITIES.length * (CELL_H + GAP) + 10 + ei * 18;
           const midX = (fromX + toX) / 2;
-          const sw = Math.max(1, Math.min(6, Math.log2(ep.count + 1)));
           return (
             <g key={`edge-${ep.from}-${ep.to}`}>
               <line
@@ -161,10 +160,8 @@ export default function AttackWorldMap({ events }: Props) {
                 x2={toX - 4}
                 y2={y}
                 stroke={SEV_COLORS[ep.sev] || "#6e7b8c"}
-                strokeWidth={sw}
+                strokeWidth={Math.max(1, Math.min(6, Math.log2(ep.count + 1)))}
                 opacity={0.7}
-                strokeDasharray={sw > 2 ? "6 3" : undefined}
-                className={sw > 2 ? "awm-line-dash" : undefined}
               />
               <polygon
                 points={`${toX - 4},${y - 3} ${toX},${y} ${toX - 4},${y + 3}`}
@@ -178,7 +175,7 @@ export default function AttackWorldMap({ events }: Props) {
                 fill="#6e7b8c"
                 fontSize={8}
               >
-                {ep.count} eventos
+                {ep.count} events
               </text>
             </g>
           );

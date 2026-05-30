@@ -14,13 +14,6 @@ const MALICIOUS_TYPES = new Set([
   "protocol_anomaly",
 ]);
 
-const TYPE_LABELS: Record<string, string> = {
-  scan_detected: "escaneo detectado",
-  auth_failure: "fallo autenticación",
-  malware_indicator: "indicador malware",
-  protocol_anomaly: "anomalía protocolo",
-};
-
 interface IocRow {
   sourceIp: string;
   type: string;
@@ -62,8 +55,8 @@ export default function IocThreatPanel({ events }: Props) {
   if (iocs.length === 0) {
     return (
       <div className="panel ioc-panel">
-        <div className="panel-header">Indicadores de amenaza</div>
-        <div className="empty-state">Sin IoCs detectados</div>
+        <div className="panel-header">IoC Threats</div>
+        <div className="empty-state">No IoCs detected</div>
       </div>
     );
   }
@@ -71,19 +64,19 @@ export default function IocThreatPanel({ events }: Props) {
   return (
     <div className="panel ioc-panel">
       <div className="panel-header">
-        Indicadores de amenaza
-        <span className="panel-sub">{iocs.length} indicadores</span>
+        IoC Threats
+        <span className="panel-sub">{iocs.length} indicators</span>
       </div>
       <div className="ioc-table-wrap">
         <table className="ioc-table">
           <thead>
             <tr>
-              <th>IP origen</th>
-              <th>Tipo</th>
-              <th>Severidad</th>
-              <th>Cant</th>
-              <th>Destinos</th>
-              <th>Último</th>
+              <th>Source IP</th>
+              <th>Threat Type</th>
+              <th>Sev</th>
+              <th>Count</th>
+              <th>Targets</th>
+              <th>Last Seen</th>
             </tr>
           </thead>
           <tbody>
@@ -91,15 +84,15 @@ export default function IocThreatPanel({ events }: Props) {
               <tr key={`${ioc.sourceIp}-${ioc.type}-${idx}`}>
                 <td className="cell-mono">{ioc.sourceIp}</td>
                 <td>
-                  <span className="ioc-type-tag">{TYPE_LABELS[ioc.type] || ioc.type.replace(/_/g, " ")}</span>
+                  <span className="ioc-type-tag">{ioc.type.replace(/_/g, " ")}</span>
                 </td>
                 <td>
                   <span className={`sev-badge sev-${ioc.severity}`}>
-                    {ioc.severity.slice(0, 1).toUpperCase()}
+                    {ioc.severity.slice(0, 1)}
                   </span>
                 </td>
                 <td className="cell-mono">{ioc.count}</td>
-                <td className="cell-mono" style={{ fontSize: "0.7rem" }}>
+                <td className="cell-mono" style={{ fontSize: "0.65rem" }}>
                   {[...ioc.destIps].slice(0, 3).join(", ")}
                   {ioc.destIps.size > 3 ? ` +${ioc.destIps.size - 3}` : ""}
                 </td>

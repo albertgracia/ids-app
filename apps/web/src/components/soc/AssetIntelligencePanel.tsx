@@ -15,17 +15,10 @@ interface AssetRow {
   critHigh: number;
   firstSeen: Date;
   lastSeen: Date;
-  criticality: "crítico" | "alto" | "medio" | "bajo";
+  criticality: "critical" | "high" | "medium" | "low";
 }
 
 const ZONE_ORDER = ["external", "dmz", "it", "ot"];
-const ZONE_LABELS: Record<string, string> = {
-  external: "\u{1F310} Externo",
-  dmz: "\u{1F6E1} DMZ",
-  it: "\u{1F4BB} IT",
-  ot: "\u{2699} OT",
-  unknown: "?",
-};
 
 function classifyZone(events: EventItem[], ip: string): string {
   const related = events.filter(
@@ -75,7 +68,7 @@ export default function AssetIntelligencePanel({ events }: Props) {
             critHigh: isCrit ? 1 : 0,
             firstSeen: ts,
             lastSeen: ts,
-            criticality: "bajo",
+            criticality: "low",
           });
         }
       }
@@ -85,10 +78,10 @@ export default function AssetIntelligencePanel({ events }: Props) {
     for (const [ip, row] of ipMap) {
       row.zone = classifyZone(events, ip);
       const ratio = row.critHigh / row.eventCount;
-      if (ratio > 0.3) row.criticality = "crítico";
-      else if (ratio > 0.15) row.criticality = "alto";
-      else if (ratio > 0.05) row.criticality = "medio";
-      else row.criticality = "bajo";
+      if (ratio > 0.3) row.criticality = "critical";
+      else if (ratio > 0.15) row.criticality = "high";
+      else if (ratio > 0.05) row.criticality = "medium";
+      else row.criticality = "low";
       rows.push(row);
     }
 
@@ -106,9 +99,9 @@ export default function AssetIntelligencePanel({ events }: Props) {
 
   const critColor = (c: string) => {
     switch (c) {
-      case "crítico": return "var(--critical)";
-      case "alto": return "var(--high)";
-      case "medio": return "var(--medium)";
+      case "critical": return "var(--critical)";
+      case "high": return "var(--high)";
+      case "medium": return "var(--medium)";
       default: return "var(--low)";
     }
   };
@@ -116,8 +109,8 @@ export default function AssetIntelligencePanel({ events }: Props) {
   if (assets.length === 0) {
     return (
       <div className="panel asset-panel">
-        <div className="panel-header">Activos</div>
-        <div className="empty-state">Sin activos detectados</div>
+        <div className="panel-header">Asset Intelligence</div>
+        <div className="empty-state">No assets derived</div>
       </div>
     );
   }
@@ -125,7 +118,7 @@ export default function AssetIntelligencePanel({ events }: Props) {
   return (
     <div className="panel asset-panel">
       <div className="panel-header">
-        Activos
+        Asset Intelligence
         <span className="panel-sub">{assets.length} IPs</span>
       </div>
       <div className="asset-table-wrap">
@@ -133,19 +126,19 @@ export default function AssetIntelligencePanel({ events }: Props) {
           <thead>
             <tr>
               <th>IP</th>
-              <th>Zona</th>
-              <th>Eventos</th>
-              <th>Crít/Altos</th>
-              <th>Criticidad</th>
-              <th>Protocolos</th>
-              <th>Último visto</th>
+              <th>Zone</th>
+              <th>Events</th>
+              <th>Crit/High</th>
+              <th>Criticality</th>
+              <th>Protocols</th>
+              <th>Last Seen</th>
             </tr>
           </thead>
           <tbody>
             {assets.map((a) => (
               <tr key={a.ip}>
                 <td className="cell-mono">{a.ip}</td>
-                <td><span className={`zone-tag zone-${a.zone}`}>{ZONE_LABELS[a.zone] || a.zone}</span></td>
+                <td><span className={`zone-tag zone-${a.zone}`}>{a.zone}</span></td>
                 <td className="cell-mono">{a.eventCount}</td>
                 <td className={`cell-mono ${a.critHigh > 0 ? "sev-high" : ""}`}>{a.critHigh}</td>
                 <td><span className="sev-badge" style={{ background: `${critColor(a.criticality)}22`, color: critColor(a.criticality) }}>{a.criticality}</span></td>

@@ -15,13 +15,6 @@ const ZONE_COLORS: Record<string, string> = {
   ot: "#db6d28",
   unknown: "#6e7b8c",
 };
-const ZONE_LABELS: Record<string, string> = {
-  external: "\u{1F310} Externo",
-  dmz: "\u{1F6E1} DMZ",
-  it: "\u{1F4BB} IT",
-  ot: "\u{2699} OT",
-  unknown: "?",
-};
 const SEV_COLORS: Record<string, string> = {
   critical: "#f85149",
   high: "#d29922",
@@ -90,7 +83,7 @@ export default function TopologyGraph({ events }: Props) {
 
     const edgeMap = new Map<string, EdgeInfo>();
     for (const e of events) {
-      const key = `${e.source.ip}\u2192${e.destination.ip}`;
+      const key = `${e.source.ip}→${e.destination.ip}`;
       const existing = edgeMap.get(key);
       if (existing) {
         existing.count++;
@@ -112,9 +105,9 @@ export default function TopologyGraph({ events }: Props) {
       .sort((a, b) => b.count - a.count)
       .slice(0, 30);
 
-    const nodeList = [...nodeMap.values()];
+    const nodes = [...nodeMap.values()];
 
-    return { nodes: nodeList, edges: sortedEdges, nodeMap };
+    return { nodes, edges: sortedEdges, nodeMap };
   }, [events]);
 
   const columns = useMemo(() => {
@@ -168,16 +161,16 @@ export default function TopologyGraph({ events }: Props) {
   return (
     <div className="panel topo-panel">
       <div className="panel-header">
-        Topología OT/IT
+        Network Topology
         <span className="topo-stats">
-          {nodes.length} nodos · {edges.length} enlaces
+          {nodes.length} nodes · {edges.length} edges
         </span>
       </div>
       <svg
         viewBox={`0 0 ${svgW} ${svgH}`}
         className="topo-svg"
         role="img"
-        aria-label="Grafo de topología de red mostrando nodos IP agrupados por zona"
+        aria-label="Network topology graph showing IP nodes grouped by zone with traffic edges"
       >
         <defs>
           <marker
@@ -214,7 +207,7 @@ export default function TopologyGraph({ events }: Props) {
               fontSize={9}
               fontWeight={700}
             >
-              {ZONE_LABELS[z] || z.toUpperCase()}
+              {z.toUpperCase()}
             </text>
           </g>
         ))}
@@ -275,9 +268,16 @@ export default function TopologyGraph({ events }: Props) {
                   r={r + 4}
                   fill="none"
                   stroke="#f85149"
-                  strokeWidth={1.5}
-                  className="topo-pulse-ring"
-                />
+                  strokeWidth={1}
+                  opacity={0.5}
+                >
+                  <animate
+                    attributeName="opacity"
+                    values="0.5;0.1;0.5"
+                    dur="2s"
+                    repeatCount="indefinite"
+                  />
+                </circle>
               )}
               <circle
                 cx={cx}
@@ -296,7 +296,7 @@ export default function TopologyGraph({ events }: Props) {
                 fontSize={Math.max(7, Math.min(10, r * 0.6))}
                 fontFamily="monospace"
               >
-                {n.ip.length > 11 ? n.ip.slice(0, 10) + "\u2026" : n.ip}
+                {n.ip.length > 11 ? n.ip.slice(0, 10) + "…" : n.ip}
               </text>
               <text
                 x={cx}

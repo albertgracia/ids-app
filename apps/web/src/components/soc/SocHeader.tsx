@@ -22,8 +22,8 @@ export default function SocHeader({ coreStatus, coreError, analyticsStatus, anal
         <div className="soc-logo">
           <span className="soc-logo-icon">◈</span>
           <div>
-            <h1 className="soc-title">Consola IDS OT/IT</h1>
-            <span className="soc-env">SOC Staging</span>
+            <h1 className="soc-title">IDS OT/IT Console</h1>
+            <span className="soc-env">Staging SOC</span>
           </div>
         </div>
       </div>
@@ -35,14 +35,9 @@ export default function SocHeader({ coreStatus, coreError, analyticsStatus, anal
         ))}
       </div>
       <div className="soc-header-right">
-        <span className="soc-label">Actualizado</span>
+        <span className="soc-label">Updated</span>
         <span className="soc-value">{lastUpdated.toLocaleTimeString()}</span>
-        {coreStatus && (
-          <>
-            <span className="soc-label">Almacenamiento</span>
-            <span className="soc-value">{coreStatus.storage_mode}</span>
-          </>
-        )}
+        {coreStatus && <><span className="soc-label">Storage</span><span className="soc-value">{coreStatus.storage_mode}</span></>}
       </div>
     </header>
   );
