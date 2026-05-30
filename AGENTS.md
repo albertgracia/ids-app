@@ -14,7 +14,7 @@ This is a monorepo for `ids-app`, an IDS OT/IT platform.
 ## Rules
 
 - No touch server `192.168.1.40` without explicit approval.
-- No SSH.
+- No SSH (unless phase explicitly authorizes).
 - No systemd.
 - No Kubernetes.
 - No modify anything outside `E:\opencode\ids-app\`.
@@ -24,6 +24,16 @@ This is a monorepo for `ids-app`, an IDS OT/IT platform.
 - No copy legacy code from `W:\ids-app\` without approval.
 - Use `task` commands as the primary interface.
 - Use `docs/` for project documentation.
+
+## Remote Operations Policy
+
+Before any remote operation (SSH, server audit, staging, deployment),
+the agent MUST read and comply with:
+
+**`docs/agent-remote-operations.md`**
+
+If there is a conflict between the phase prompt and this policy document,
+the most restrictive rule prevails.
 
 ## Available Commands
 
