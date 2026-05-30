@@ -101,12 +101,17 @@ tasks:
       - cmd: cd {{.WEB_DIR}} && npm run typecheck
         ignore_error: true
 
+  validate:suricata-contract:
+    desc: Validate Suricata EVE JSON sample contract
+    cmd: python packages/contracts/suricata/tests/validate_suricata_samples.py
+
   check:
     desc: Run all checks (lint, typecheck, test)
     cmds:
       - task: lint
       - task: typecheck
       - task: test
+      - task: validate:suricata-contract
 
   clean:
     desc: Clean build artifacts

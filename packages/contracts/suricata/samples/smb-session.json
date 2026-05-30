@@ -1,0 +1,20 @@
+{
+  "timestamp": "2026-05-30T12:07:00.000000+0000",
+  "flow_id": 8000001,
+  "in_iface": "eth1",
+  "event_type": "smb",
+  "src_ip": "10.10.1.10",
+  "src_port": 49156,
+  "dest_ip": "10.10.1.30",
+  "dest_port": 445,
+  "proto": "TCP",
+  "smb": {
+    "command": "SMB2_COM_CREATE",
+    "status": "STATUS_SUCCESS",
+    "filename": "\\shared\\docs\\report.pdf",
+    "tree": "\\\\10.10.1.30\\shared",
+    "share": "shared",
+    "access_mask": "READ_CONTROL|SYNCHRONIZE|FILE_READ_DATA",
+    "guid": "aabbccdd-0011-2233-4455-66778899aabb"
+  }
+}

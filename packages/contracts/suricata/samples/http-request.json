@@ -1,0 +1,21 @@
+{
+  "timestamp": "2026-05-30T12:03:00.000000+0000",
+  "flow_id": 4000001,
+  "in_iface": "eth1",
+  "event_type": "http",
+  "src_ip": "10.10.1.10",
+  "src_port": 49153,
+  "dest_ip": "198.51.100.80",
+  "dest_port": 80,
+  "proto": "TCP",
+  "http": {
+    "hostname": "intranet.example.com",
+    "url": "/dashboard",
+    "http_user_agent": "Mozilla/5.0 (X11; Linux x86_64)",
+    "http_content_type": "text/html",
+    "http_method": "GET",
+    "protocol": "HTTP/1.1",
+    "status": 200,
+    "length": 3420
+  }
+}

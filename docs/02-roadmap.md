@@ -71,7 +71,14 @@
 - [ ] Add generate_report tool
 - [ ] Test MCP integration with OpenCode
 
-## Phase 11 — IDS-STAGING-DEPLOY-OBS-SERVER-01 ⬜
+## Phase 11 — IDS-SENSOR-SURICATA-EVE-SAMPLE-CONTRACT-01 ✅
+- [x] 9 synthetic EVE JSON samples (alert, flow, dns, http, tls, ssh, rdp, smb, modbus)
+- [x] JSON schema for minimal contract
+- [x] Python validation tests (no real data, all pass)
+- [x] Taskfile integration
+- **Status:** PASS
+
+## Phase 12 — IDS-STAGING-DEPLOY-OBS-SERVER-01 ⬜
 - [ ] Full deployment to 192.168.1.40
 - [ ] End-to-end testing on staging
 - [ ] Performance benchmarking
@@ -81,7 +88,7 @@
 
 | Phase | Description |
 |-------|-------------|
-| `IDS-SENSOR-SURICATA-EVE-SAMPLE-CONTRACT-01` | Define sample EVE JSON structures and test contracts |
+| `IDS-SENSOR-SURICATA-EVE-SAMPLE-CONTRACT-01` | ✅ Complete |
 | `IDS-SENSOR-SURICATA-EVE-PARSER-01` | Implement EVE JSON parser/normalizer |
 | `IDS-SENSOR-SURICATA-EVE-INGEST-01` | Integrate parser with ids-core ingest pipeline |
 | `IDS-SENSOR-SURICATA-LAB-DEPLOY-01` | Deploy Suricata in lab/VM for testing |

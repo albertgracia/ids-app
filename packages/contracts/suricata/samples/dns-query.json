@@ -1,0 +1,18 @@
+{
+  "timestamp": "2026-05-30T12:02:00.000000+0000",
+  "flow_id": 3000001,
+  "in_iface": "eth1",
+  "event_type": "dns",
+  "src_ip": "10.10.1.5",
+  "src_port": 33456,
+  "dest_ip": "203.0.113.53",
+  "dest_port": 53,
+  "proto": "UDP",
+  "dns": {
+    "type": "query",
+    "id": 12345,
+    "rrname": "updates.example.com",
+    "rrtype": "A",
+    "tx_id": 0
+  }
+}

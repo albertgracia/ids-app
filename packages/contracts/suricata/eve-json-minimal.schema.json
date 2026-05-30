@@ -1,0 +1,118 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Suricata EVE JSON Minimal Schema",
+  "description": "Minimal JSON Schema for Suricata EVE JSON samples used in ids-app contract validation.",
+  "type": "object",
+  "required": ["timestamp", "event_type", "src_ip", "dest_ip", "proto"],
+  "properties": {
+    "timestamp": {
+      "type": "string",
+      "description": "Event timestamp in Suricata format (RFC 3339 with microseconds)"
+    },
+    "event_type": {
+      "type": "string",
+      "enum": ["alert", "flow", "dns", "http", "tls", "ssh", "rdp", "smb", "modbus"],
+      "description": "Suricata EVE event type"
+    },
+    "src_ip": {
+      "type": "string",
+      "description": "Source IP address"
+    },
+    "src_port": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 65535,
+      "description": "Source port (optional)"
+    },
+    "dest_ip": {
+      "type": "string",
+      "description": "Destination IP address"
+    },
+    "dest_port": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 65535,
+      "description": "Destination port (optional)"
+    },
+    "proto": {
+      "type": "string",
+      "description": "Transport protocol (TCP, UDP, ICMP)"
+    },
+    "app_proto": {
+      "type": "string",
+      "description": "Application protocol (modbus, http, tls, etc.)"
+    },
+    "flow_id": {
+      "type": "integer",
+      "description": "Suricata flow identifier"
+    },
+    "in_iface": {
+      "type": "string",
+      "description": "Ingress interface name"
+    },
+    "alert": {
+      "type": "object",
+      "description": "Alert event fields",
+      "properties": {
+        "signature_id": {"type": "integer"},
+        "signature": {"type": "string"},
+        "category": {"type": "string"},
+        "severity": {"type": "integer", "minimum": 1, "maximum": 3}
+      },
+      "required": ["signature_id", "signature", "category", "severity"]
+    },
+    "flow": {
+      "type": "object",
+      "description": "Flow event fields"
+    },
+    "dns": {
+      "type": "object",
+      "description": "DNS event fields",
+      "properties": {
+        "rrname": {"type": "string"},
+        "rrtype": {"type": "string"}
+      }
+    },
+    "http": {
+      "type": "object",
+      "description": "HTTP event fields",
+      "properties": {
+        "hostname": {"type": "string"},
+        "url": {"type": "string"},
+        "http_method": {"type": "string"},
+        "status": {"type": "integer"}
+      }
+    },
+    "tls": {
+      "type": "object",
+      "description": "TLS event fields",
+      "properties": {
+        "sni": {"type": "string"},
+        "version": {"type": "string"},
+        "fingerprint": {"type": "string"}
+      }
+    },
+    "ssh": {
+      "type": "object",
+      "description": "SSH event fields"
+    },
+    "rdp": {
+      "type": "object",
+      "description": "RDP event fields"
+    },
+    "smb": {
+      "type": "object",
+      "description": "SMB event fields"
+    },
+    "modbus": {
+      "type": "object",
+      "description": "Modbus event fields",
+      "properties": {
+        "function_code": {"type": "integer"},
+        "unit_id": {"type": "integer"},
+        "address": {"type": "integer"},
+        "count": {"type": "integer"}
+      }
+    }
+  }
+}

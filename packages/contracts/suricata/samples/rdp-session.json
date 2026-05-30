@@ -1,0 +1,18 @@
+{
+  "timestamp": "2026-05-30T12:06:00.000000+0000",
+  "flow_id": 7000001,
+  "in_iface": "eth1",
+  "event_type": "rdp",
+  "src_ip": "10.10.1.20",
+  "src_port": 49155,
+  "dest_ip": "10.10.1.5",
+  "dest_port": 3389,
+  "proto": "TCP",
+  "rdp": {
+    "cookie": "mstsc",
+    "client_build": "2600",
+    "client_name": "lab-workstation-01",
+    "client_version": 5,
+    "cert_sha1": "aa:bb:cc:dd:ee:ff:00:11:22:33:44:55:66:77:88:99:aa:bb:cc:dd"
+  }
+}

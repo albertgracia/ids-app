@@ -1,0 +1,19 @@
+{
+  "timestamp": "2026-05-30T12:08:00.000000+0000",
+  "flow_id": 9000001,
+  "in_iface": "eth1",
+  "event_type": "modbus",
+  "src_ip": "172.16.100.5",
+  "src_port": 49157,
+  "dest_ip": "172.16.100.20",
+  "dest_port": 502,
+  "proto": "TCP",
+  "app_proto": "modbus",
+  "modbus": {
+    "function_code": 3,
+    "unit_id": 1,
+    "address": 100,
+    "count": 10,
+    "request_length": 12
+  }
+}
