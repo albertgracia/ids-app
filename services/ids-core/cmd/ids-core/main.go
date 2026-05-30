@@ -79,6 +79,6 @@ func handleStatus(w http.ResponseWriter, r *http.Request) {
 		Status:       "ok",
 		Mode:         "development",
 		Version:      "0.1.0",
-		Capabilities: []string{"event_model"},
+		Capabilities: []string{"event_model", "asset_inventory_model"},
 	})
 }
