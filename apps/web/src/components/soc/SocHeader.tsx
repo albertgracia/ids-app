@@ -12,7 +12,6 @@ interface Props {
   lastUpdated: Date;
   criticalCount: number;
   highCount: number;
-  liveStatus?: string;
 }
 
 type HealthLed = "healthy" | "warning" | "critical";
@@ -25,7 +24,6 @@ export default function SocHeader({
   lastUpdated,
   criticalCount,
   highCount,
-  liveStatus,
 }: Props) {
   const [secondsAgo, setSecondsAgo] = useState(0);
   const [timeStr, setTimeStr] = useState("");
@@ -79,12 +77,6 @@ export default function SocHeader({
               <span className="svc-dot" /> {s.name}
             </span>
           ))}
-          {liveStatus && (
-            <span className={`soc-svc-badge ${liveStatus === "connected" ? "svc-ok" : liveStatus === "reconnecting" ? "svc-warn" : "svc-down"}`}>
-              <span className={`svc-dot ${liveStatus === "connected" ? "svc-pulse" : ""}`} />
-              {liveStatus === "connected" ? "EN VIVO" : liveStatus === "reconnecting" ? "Reconectando..." : "Polling"}
-            </span>
-          )}
         </div>
 
         <div className="soc-header-right">

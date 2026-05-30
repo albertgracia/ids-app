@@ -4,7 +4,6 @@ import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import type { AnalyticsStatus, CoreStatus, EventItem, ScoreResponse } from "@/lib/types";
 import { getStatus, getRecentEvents } from "@/lib/ids-core";
 import { getAnalyticsStatus, scoreEvent } from "@/lib/analytics-api";
-import { connectLiveStream, disconnect } from "@/lib/live-events";
 import { L } from "@/lib/soc-labels";
 import SocHeader from "@/components/soc/SocHeader";
 import ExecutiveKpiStrip from "@/components/soc/ExecutiveKpiStrip";
@@ -113,23 +112,6 @@ export default function Home() {
     };
   }, [fetchAll]);
 
-  const [liveStatus, setLiveStatus] = useState<string>("disconnected");
-
-  useEffect(() => {
-    const cleanup = connectLiveStream(
-      (evt: EventItem) => {
-        setEvents((prev) => {
-          if (prev.some((e) => e.id === evt.id)) return prev;
-          const next = [evt, ...prev];
-          return next.slice(0, 100);
-        });
-        setLastUpdated(new Date());
-      },
-      (status) => setLiveStatus(status),
-    );
-    return cleanup;
-  }, []);
-
   const handleScore = async () => {
     if (!selectedEvent) return;
     setScoring(true);
@@ -166,7 +148,6 @@ export default function Home() {
         lastUpdated={lastUpdated}
         criticalCount={criticalCount}
         highCount={highCount}
-        liveStatus={liveStatus}
       />
 
       {/* Row 2: KPIs (vertical sidebar) | World Threat Map | Topology Graph */}
