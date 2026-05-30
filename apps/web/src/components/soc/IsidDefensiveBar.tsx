@@ -13,7 +13,7 @@ export default function IsidDefensiveBar() {
   return (
     <div className="isid-bar">
       <div className="isid-left">
-        <span className="isid-title">🛡 ACCIONES DEFENSIVAS iSID</span>
+        <span className="isid-title">Acciones defensivas iSID</span>
         <span className="isid-note">(Simulado — pendiente de backend)</span>
       </div>
       <div className="isid-actions">

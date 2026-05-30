@@ -74,6 +74,18 @@ function attackLabel(type: string): string {
 }
 
 export default function AttackWorldMap({ events }: Props) {
+  const threatCount = useMemo(() => {
+    return events.filter((e) => {
+      const ip = e.source.ip;
+      const oct1 = parseInt(ip.split(".")[0], 10);
+      const oct2 = parseInt(ip.split(".")[1], 10);
+      if (oct1 === 10) return false;
+      if (oct1 === 172 && oct2 >= 16 && oct2 <= 31) return false;
+      if (oct1 === 192 && oct2 === 168) return false;
+      return true;
+    }).length;
+  }, [events]);
+
   const attackLines = useMemo((): AttackLine[] => {
     // Target: "RED INTERNA" at center of map
     const targetX = 180;
@@ -128,10 +140,14 @@ export default function AttackWorldMap({ events }: Props) {
     <div className="panel awm-panel">
       <div className="panel-header">
         <span>{L.panels.attackMap}</span>
-        <span className="panel-sub">Tráfico entrante — última hora</span>
+        <span className="panel-sub">
+          {threatCount > 0
+            ? `${attackLines.length} ${attackLines.length === 1 ? "amenaza activa" : "amenazas activas"}`
+            : "Sin amenazas entrantes"}
+        </span>
       </div>
       <svg
-        viewBox="0 0 620 300"
+        viewBox="0 0 680 320"
         className="awm-world-svg"
         role="img"
         aria-label="Mapa mundial de amenazas: líneas de ataque desde orígenes sintéticos hacia red interna"
@@ -139,8 +155,16 @@ export default function AttackWorldMap({ events }: Props) {
       >
         <defs>
           <filter id="awm-glow">
-            <feGaussianBlur stdDeviation="2" result="blur" />
+            <feGaussianBlur stdDeviation="2.5" result="blur" />
             <feMerge>
+              <feMergeNode in="blur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+          <filter id="awm-glow-strong">
+            <feGaussianBlur stdDeviation="4" result="blur" />
+            <feMerge>
+              <feMergeNode in="blur" />
               <feMergeNode in="blur" />
               <feMergeNode in="SourceGraphic" />
             </feMerge>
@@ -151,14 +175,14 @@ export default function AttackWorldMap({ events }: Props) {
         {Array.from({ length: 8 }, (_, i) => (
           <line
             key={`gh${i}`}
-            x1={0} y1={i * 43} x2={620} y2={i * 43}
+            x1={0} y1={i * 46} x2={680} y2={i * 46}
             stroke="#1a2433" strokeWidth={0.5}
           />
         ))}
-        {Array.from({ length: 11 }, (_, i) => (
+        {Array.from({ length: 12 }, (_, i) => (
           <line
             key={`gv${i}`}
-            x1={i * 62} y1={0} x2={i * 62} y2={300}
+            x1={i * 62} y1={0} x2={i * 62} y2={320}
             stroke="#1a2433" strokeWidth={0.5}
           />
         ))}
@@ -176,11 +200,12 @@ export default function AttackWorldMap({ events }: Props) {
 
         {/* Internal network target marker */}
         <circle
-          cx={180} cy={155} r={12}
+          cx={180} cy={155} r={18}
           fill="none"
           stroke="var(--accent)"
-          strokeWidth={1.5}
-          strokeDasharray="3 2"
+          strokeWidth={2}
+          strokeDasharray="4 3"
+          opacity={0.7}
         >
           <animateTransform
             attributeName="transform"
@@ -191,48 +216,62 @@ export default function AttackWorldMap({ events }: Props) {
             repeatCount="indefinite"
           />
         </circle>
-        <circle cx={180} cy={155} r={4} fill="var(--accent)" filter="url(#awm-glow)" />
-        <text x={180} y={180} textAnchor="middle" fill="var(--accent)" fontSize="7" fontFamily="monospace">
+        <circle cx={180} cy={155} r={6} fill="var(--accent)" filter="url(#awm-glow-strong)" />
+        <text x={180} y={185} textAnchor="middle" fill="var(--accent)" fontSize="9" fontWeight={700} fontFamily="monospace">
           RED INTERNA
         </text>
 
         {/* Attack lines from real event data */}
         {attackLines.map((a) => {
           const cx = (a.x1 + a.x2) / 2;
-          const cy = Math.min(a.y1, a.y2) - 35;
+          const cy = Math.min(a.y1, a.y2) - 38;
           const c = SEV_COLORS[a.sev] || "#6e7b8c";
           return (
             <g key={a.id}>
-              {/* Source dot */}
-              <circle cx={a.x1} cy={a.y1} r={4} fill={c} opacity={0.9}>
-                <animate attributeName="r" values="3;5;3" dur="2s" repeatCount="indefinite" />
-                <animate attributeName="opacity" values="0.7;1;0.7" dur="2s" repeatCount="indefinite" />
-              </circle>
+              {/* Glow underlay */}
+              <path
+                d={`M ${a.x1},${a.y1} Q ${cx},${cy} ${a.x2},${a.y2}`}
+                fill="none" stroke={c} strokeWidth={4}
+                opacity={0.18} filter="url(#awm-glow)"
+              />
               {/* Curved line */}
               <path
                 d={`M ${a.x1},${a.y1} Q ${cx},${cy} ${a.x2},${a.y2}`}
-                fill="none" stroke={c} strokeWidth={1.5}
-                strokeDasharray="6 4" opacity={0.8}
+                fill="none" stroke={c} strokeWidth={2}
+                strokeDasharray="8 5" opacity={0.85}
                 className="attack-line-flow" filter="url(#awm-glow)"
               />
+              {/* Source dot */}
+              <circle cx={a.x1} cy={a.y1} r={5.5} fill={c} opacity={0.95} filter="url(#awm-glow)">
+                <animate attributeName="r" values="4;6;4" dur="2s" repeatCount="indefinite" />
+                <animate attributeName="opacity" values="0.7;1;0.7" dur="2s" repeatCount="indefinite" />
+              </circle>
               {/* Data packet traveling */}
-              <circle r={2.5} fill={c} opacity={0.9} className="attack-dot">
+              <circle r={3} fill={c} opacity={0.95} className="attack-dot" filter="url(#awm-glow)">
                 <animateMotion
                   dur="3s" repeatCount="indefinite"
                   path={`M ${a.x1},${a.y1} Q ${cx},${cy} ${a.x2},${a.y2}`}
                 />
               </circle>
               {/* Country label near source */}
+              <rect
+                x={a.x1 - 12} y={a.y1 - 22} width={24} height={11}
+                rx={2} fill="rgba(10,14,20,0.75)"
+              />
               <text
-                x={a.x1} y={a.y1 - 10} textAnchor="middle" fill={c}
-                fontSize="6.5" fontFamily="monospace" fontWeight={700} opacity={0.9}
+                x={a.x1} y={a.y1 - 14} textAnchor="middle" fill={c}
+                fontSize="8" fontFamily="monospace" fontWeight={700} opacity={0.95}
               >
                 {a.country}
               </text>
               {/* Attack label on curve */}
+              <rect
+                x={cx - 28} y={cy - 14} width={56} height={12}
+                rx={2} fill="rgba(10,14,20,0.75)"
+              />
               <text
-                x={cx} y={cy - 6} textAnchor="middle" fill={c}
-                fontSize="5.5" fontFamily="monospace" opacity={0.85}
+                x={cx} y={cy - 4} textAnchor="middle" fill={c}
+                fontSize="7" fontFamily="monospace" fontWeight={600} opacity={0.9}
               >
                 {a.label}
               </text>
@@ -242,17 +281,17 @@ export default function AttackWorldMap({ events }: Props) {
 
         {/* No data fallback */}
         {attackLines.length === 0 && (
-          <text x={310} y={200} textAnchor="middle" fill="#6e7b8c" fontSize="10" fontFamily="monospace">
+          <text x={340} y={210} textAnchor="middle" fill="#6e7b8c" fontSize="11" fontFamily="monospace">
             Sin eventos externos recientes
           </text>
         )}
       </svg>
 
       {/* Legend */}
-      <div className="timeline-legend" style={{ marginTop: 4 }}>
+      <div className="timeline-legend" style={{ marginTop: 5 }}>
         {(["critical", "high", "medium", "low"] as const).map((s) => (
-          <span key={s} className="tl-legend-item" style={{ fontSize: 9 }}>
-            <span className="tl-legend-dot" style={{ background: SEV_COLORS[s] }} />
+          <span key={s} className="tl-legend-item" style={{ fontSize: 10 }}>
+            <span className="tl-legend-dot" style={{ background: SEV_COLORS[s], width: 10, height: 10 }} />
             {s === "critical" ? "CRÍTICO" : s === "high" ? "ALTO" : s === "medium" ? "MEDIO" : "BAJO"}
           </span>
         ))}

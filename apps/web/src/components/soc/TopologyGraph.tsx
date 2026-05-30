@@ -75,13 +75,13 @@ export default function TopologyGraph({ events }: Props) {
   const maxEvents = Math.max(1, ...nodes.map((n) => n.eventCount));
   const maxEdges = Math.max(1, ...edges.map((e) => e.count));
 
-  const COL_W = 120;
-  const COL_GAP = 70;
-  const NODE_GAP = 12;
-  const PAD_LEFT = 20;
-  const PAD_TOP = 30;
-  const MIN_NODE_R = 8;
-  const MAX_NODE_R = 22;
+  const COL_W = 130;
+  const COL_GAP = 75;
+  const NODE_GAP = 16;
+  const PAD_LEFT = 25;
+  const PAD_TOP = 35;
+  const MIN_NODE_R = 18;
+  const MAX_NODE_R = 28;
 
   const zoneColumns = [...ZONES, "unknown" as const].filter((z) => columns[z]?.length > 0);
   const svgW = PAD_LEFT + zoneColumns.length * COL_W + Math.max(0, zoneColumns.length - 1) * COL_GAP + 20;
@@ -98,11 +98,11 @@ export default function TopologyGraph({ events }: Props) {
       nodeYs.set(colNodes[ni].ip, y);
     }
     colPositions[z] = { x, nodeYs };
-    const colH = PAD_TOP + colNodes.length * (MAX_NODE_R * 2 + NODE_GAP) + 20;
+    const colH = PAD_TOP + colNodes.length * (MAX_NODE_R * 2 + NODE_GAP) + 30;
     maxColH = Math.max(maxColH, colH);
   }
 
-  const svgH = maxColH + 40;
+  const svgH = maxColH + 50;
 
   return (
     <div className="panel topo-panel">
@@ -132,22 +132,22 @@ export default function TopologyGraph({ events }: Props) {
             <g key={`zone-bg-${z}`}>
               <rect
                 x={colPositions[z].x - COL_W / 2}
-                y={PAD_TOP - 20}
+                y={PAD_TOP - 24}
                 width={COL_W}
                 height={h}
-                rx={3}
+                rx={4}
                 fill="none"
                 stroke={ZONE_COLORS[z] || "#1e2a3a"}
-                strokeWidth={0.6}
+                strokeWidth={0.8}
                 strokeDasharray="3,3"
-                opacity={0.35}
+                opacity={0.4}
               />
               <text
                 x={colPositions[z].x}
-                y={PAD_TOP - 24}
+                y={PAD_TOP - 26}
                 textAnchor="middle"
                 fill={ZONE_COLORS[z] || "#6e7b8c"}
-                fontSize={9}
+                fontSize={11}
                 fontWeight={700}
               >
                 {z.toUpperCase()}
@@ -170,19 +170,30 @@ export default function TopologyGraph({ events }: Props) {
           const x2 = toPos.x;
           const y2 = toPos.nodeYs.get(edge.to);
           if (y1 === undefined || y2 === undefined) return null;
-          const sw = Math.max(0.5, Math.min(5, (edge.count / maxEdges) * 5));
+          const sw = Math.max(1, Math.min(6, (edge.count / maxEdges) * 6));
           const color = SEV_COLORS[edge.sev] || "#6e7b8c";
           return (
-            <line
-              key={`edge-${edge.from}-${edge.to}`}
-              x1={x1 + MAX_NODE_R + 2}
-              y1={y1}
-              x2={x2 - MAX_NODE_R - 2}
-              y2={y2}
-              stroke={color}
-              strokeWidth={sw}
-              opacity={0.35}
-            />
+            <g key={`edge-${edge.from}-${edge.to}`}>
+              {/* Glow layer */}
+              <line
+                x1={x1 + MAX_NODE_R + 2}
+                y1={y1}
+                x2={x2 - MAX_NODE_R - 2}
+                y2={y2}
+                stroke={color}
+                strokeWidth={sw + 2}
+                opacity={0.15}
+              />
+              <line
+                x1={x1 + MAX_NODE_R + 2}
+                y1={y1}
+                x2={x2 - MAX_NODE_R - 2}
+                y2={y2}
+                stroke={color}
+                strokeWidth={sw}
+                opacity={0.55}
+              />
+            </g>
           );
         })}
 
@@ -267,17 +278,17 @@ export default function TopologyGraph({ events }: Props) {
                 y={cy + 1}
                 textAnchor="middle"
                 fill="#c9d1d9"
-                fontSize={Math.max(7, Math.min(10, r * 0.6))}
+                fontSize={Math.max(8, Math.min(11, r * 0.5))}
                 fontFamily="JetBrains Mono, Cascadia Code, Fira Code, Consolas, monospace"
               >
-                {n.ip.length > 11 ? n.ip.slice(0, 10) + "\u2026" : n.ip}
+                {n.ip.length > 13 ? n.ip.slice(0, 11) + "\u2026" : n.ip}
               </text>
               <text
                 x={cx}
-                y={cy + r + 10}
+                y={cy + r + 11}
                 textAnchor="middle"
                 fill="#6e7b8c"
-                fontSize={7}
+                fontSize={8}
                 fontFamily="JetBrains Mono, Cascadia Code, Fira Code, Consolas, monospace"
               >
                 {n.eventCount}e {isCritical ? `\u00B7 ${n.criticalCount}c` : ""}

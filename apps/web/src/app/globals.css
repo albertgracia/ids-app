@@ -33,6 +33,30 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* ===== Dark Scrollbars ===== */
+
+::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg);
+}
+
+::-webkit-scrollbar-thumb {
+  background: #1e2a3a;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #2a3a4e;
+}
+
+::-webkit-scrollbar-corner {
+  background: var(--bg);
+}
+
 /* ===== Dashboard Container ===== */
 
 .soc-dashboard {
@@ -57,7 +81,7 @@ body {
 /* Row 2: KPIs (vertical sidebar) | Map | Topology */
 .soc-row-top {
   display: grid;
-  grid-template-columns: 200px 1fr 390px;
+  grid-template-columns: 200px minmax(350px, 1fr) minmax(380px, 1fr);
   gap: 0.75rem;
   margin-bottom: 0.75rem;
 }
@@ -114,7 +138,7 @@ body {
 }
 
 .panel-header {
-  font-size: 0.8rem;
+  font-size: 0.82rem;
   font-weight: 600;
   color: var(--text-dim);
   text-transform: uppercase;
@@ -126,7 +150,7 @@ body {
 }
 
 .panel-sub {
-  font-size: 0.6rem;
+  font-size: 0.65rem;
   font-weight: 400;
   text-transform: none;
   color: var(--text-dim);
@@ -481,8 +505,9 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.5rem;
-  padding: 0.35rem 0.65rem;
+  gap: 0.75rem;
+  padding: 0.5rem 1rem;
+  min-height: 48px;
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: 4px;
@@ -493,39 +518,39 @@ body {
 
 .isid-left {
   display: flex;
-  align-items: center;
-  gap: 0.5rem;
+  align-items: baseline;
+  gap: 0.75rem;
   flex-shrink: 0;
 }
 
 .isid-title {
-  font-size: 0.65rem;
+  font-size: 0.78rem;
   font-weight: 700;
   color: var(--accent);
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.05em;
   white-space: nowrap;
 }
 
 .isid-note {
-  font-size: 0.55rem;
-  color: var(--text-dim);
+  font-size: 0.62rem;
+  color: var(--warning);
   font-style: italic;
   white-space: nowrap;
 }
 
 .isid-actions {
   display: flex;
-  gap: 0.3rem;
+  gap: 0.35rem;
   flex-wrap: wrap;
 }
 
 .isid-btn {
   display: inline-flex;
   align-items: center;
-  gap: 0.2rem;
-  padding: 0.2rem 0.5rem;
-  font-size: 0.6rem;
+  gap: 0.25rem;
+  padding: 0.4rem 0.8rem;
+  font-size: 0.7rem;
   font-family: inherit;
   color: var(--text-dim);
   background: var(--bg);
@@ -542,7 +567,7 @@ body {
 }
 
 .isid-btn-icon {
-  font-size: 0.65rem;
+  font-size: 0.75rem;
 }
 
 /* ===== Header Tech Capability Badges ===== */
@@ -641,10 +666,14 @@ body {
 }
 
 .route-label {
-  font-size: 0.45rem;
+  font-size: 0.55rem;
   color: var(--text-dim);
   text-transform: uppercase;
   letter-spacing: 0.06em;
+}
+
+.route-node .cell-mono {
+  font-size: 0.65rem;
 }
 
 .route-arrow-svg {
@@ -681,7 +710,7 @@ body {
 }
 
 .topo-stats {
-  font-size: 0.6rem;
+  font-size: 0.68rem;
   font-weight: 400;
   text-transform: none;
   color: var(--text-dim);
@@ -760,7 +789,7 @@ body {
   display: flex;
   gap: 0.75rem;
   margin-top: 0.5rem;
-  font-size: 0.65rem;
+  font-size: 0.7rem;
   flex-wrap: wrap;
 }
 
@@ -817,38 +846,39 @@ body {
 
 .asset-panel .asset-table-wrap {
   overflow-x: auto;
-  max-height: 280px;
+  max-height: 320px;
   overflow-y: auto;
 }
 
 .asset-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.7rem;
+  font-size: 0.75rem;
 }
 
 .asset-table th {
   text-align: left;
-  padding: 0.3rem 0.4rem;
+  padding: 0.35rem 0.4rem;
   border-bottom: 1px solid var(--border);
   color: var(--text-dim);
   font-weight: 600;
   white-space: nowrap;
-  font-size: 0.65rem;
+  font-size: 0.68rem;
   position: sticky;
   top: 0;
   background: var(--bg-card);
+  z-index: 1;
 }
 
 .asset-table td {
-  padding: 0.25rem 0.4rem;
+  padding: 0.3rem 0.4rem;
   border-bottom: 1px solid var(--border);
 }
 
 .zone-tag {
-  padding: 0.05rem 0.3rem;
+  padding: 0.08rem 0.35rem;
   border-radius: 2px;
-  font-size: 0.6rem;
+  font-size: 0.68rem;
   font-weight: 600;
   text-transform: uppercase;
 }
@@ -889,36 +919,37 @@ body {
 
 .ioc-panel .ioc-table-wrap {
   overflow-x: auto;
-  max-height: 280px;
+  max-height: 320px;
   overflow-y: auto;
 }
 
 .ioc-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.7rem;
+  font-size: 0.75rem;
 }
 
 .ioc-table th {
   text-align: left;
-  padding: 0.3rem 0.4rem;
+  padding: 0.35rem 0.4rem;
   border-bottom: 1px solid var(--border);
   color: var(--text-dim);
   font-weight: 600;
   white-space: nowrap;
-  font-size: 0.65rem;
+  font-size: 0.68rem;
   position: sticky;
   top: 0;
   background: var(--bg-card);
+  z-index: 1;
 }
 
 .ioc-table td {
-  padding: 0.25rem 0.4rem;
+  padding: 0.3rem 0.4rem;
   border-bottom: 1px solid var(--border);
 }
 
 .ioc-type-tag {
-  font-size: 0.65rem;
+  font-size: 0.7rem;
   color: var(--accent);
 }
 
@@ -928,13 +959,13 @@ body {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  margin: 0.2rem 0;
-  font-size: 0.7rem;
+  margin: 0.25rem 0;
+  font-size: 0.75rem;
 }
 
 .sev-overview-panel .sev-bar-track {
   flex: 1;
-  height: 8px;
+  height: 10px;
   background: var(--bg);
   border-radius: 2px;
   overflow: hidden;
@@ -1006,9 +1037,9 @@ body {
 /* Badge expandido (palabra completa, no letra) */
 .sev-badge-expanded {
   display: inline-block;
-  padding: 0.1rem 0.45rem;
+  padding: 0.18rem 0.5rem;
   border-radius: 3px;
-  font-size: 0.65rem;
+  font-size: 0.73rem;
   font-weight: 700;
   white-space: nowrap;
   letter-spacing: 0.03em;
@@ -1041,9 +1072,9 @@ body {
 
 /* Legacy badge (compact) */
 .sev-badge {
-  padding: 0.08rem 0.3rem;
+  padding: 0.12rem 0.35rem;
   border-radius: 2px;
-  font-size: 0.65rem;
+  font-size: 0.7rem;
   font-weight: 700;
 }
 
@@ -1073,9 +1104,9 @@ body {
 }
 
 .sev-label {
-  min-width: 48px;
+  min-width: 52px;
   font-weight: 600;
-  font-size: 0.7rem;
+  font-size: 0.75rem;
   text-transform: capitalize;
 }
 
@@ -1083,26 +1114,32 @@ body {
 
 .recent-table-wrap {
   overflow-x: auto;
+  max-height: 420px;
+  overflow-y: auto;
 }
 
 .recent-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.7rem;
+  font-size: 0.82rem;
 }
 
 .recent-table th {
   text-align: left;
-  padding: 0.3rem 0.4rem;
+  padding: 0.35rem 0.45rem;
   border-bottom: 1px solid var(--border);
   color: var(--text-dim);
   font-weight: 600;
   white-space: nowrap;
-  font-size: 0.65rem;
+  font-size: 0.7rem;
+  position: sticky;
+  top: 0;
+  background: var(--bg-card);
+  z-index: 1;
 }
 
 .recent-table td {
-  padding: 0.3rem 0.4rem;
+  padding: 0.38rem 0.45rem;
   border-bottom: 1px solid var(--border);
 }
 
@@ -1133,25 +1170,37 @@ body {
 }
 
 .event-row:hover {
-  background: rgba(88, 166, 255, 0.06);
+  background: rgba(88, 166, 255, 0.09);
 }
 
 .event-row.selected {
-  background: rgba(88, 166, 255, 0.1);
+  background: rgba(88, 166, 255, 0.16);
+  outline: none;
 }
 
-.event-row.sev-critical-row:hover,
+.event-row.sev-critical-row:hover {
+  background: rgba(248, 81, 73, 0.12);
+}
+
 .event-row.sev-critical-row.selected {
-  background: rgba(248, 81, 73, 0.08);
+  background: rgba(248, 81, 73, 0.18);
+}
+
+.event-row.sev-high-row:hover {
+  background: rgba(234, 179, 8, 0.12);
+}
+
+.event-row.sev-high-row.selected {
+  background: rgba(234, 179, 8, 0.18);
 }
 
 .cell-mono {
   font-family: "JetBrains Mono", "Cascadia Code", "Fira Code", Consolas, monospace;
-  font-size: 0.65rem;
+  font-size: 0.72rem;
 }
 
 .cell-title {
-  max-width: 200px;
+  max-width: 220px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1159,8 +1208,8 @@ body {
 
 .cell-new-indicator {
   display: inline-block;
-  width: 6px;
-  height: 6px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
   background: var(--accent);
   margin-right: 0.3rem;
@@ -1172,17 +1221,17 @@ body {
 .inspector-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 0.5rem;
-  font-size: 0.75rem;
+  gap: 0.65rem;
+  font-size: 0.82rem;
 }
 
 .ilabel {
-  font-size: 0.6rem;
+  font-size: 0.65rem;
   color: var(--text-dim);
   text-transform: uppercase;
   letter-spacing: 0.05em;
   display: block;
-  margin-bottom: 0.1rem;
+  margin-bottom: 0.15rem;
 }
 
 .inspector-title {
@@ -1244,13 +1293,14 @@ body {
 
 .factor-row {
   display: flex;
-  gap: 0.4rem;
-  font-size: 0.7rem;
-  padding: 0.1rem 0;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  padding: 0.15rem 0;
 }
 
 .factor-row code {
   min-width: 110px;
+  font-size: 0.72rem;
 }
 
 .factor-impact {
@@ -1260,9 +1310,9 @@ body {
 }
 
 .score-recs ul {
-  margin: 0.25rem 0;
+  margin: 0.35rem 0;
   padding-left: 1.2rem;
-  font-size: 0.7rem;
+  font-size: 0.75rem;
 }
 
 .score-recs li {

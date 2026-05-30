@@ -177,11 +177,11 @@ export default function EventInspectorPanel({ event, score, scoring, onScore, sc
             <svg width="60" height="24" viewBox="0 0 60 24">
               <line
                 x1={0} y1={12} x2={42} y2={12}
-                stroke="var(--critical)" strokeWidth={1.5}
+                stroke="var(--critical)" strokeWidth={2}
                 strokeDasharray="4 2" opacity={0.7}
               />
               <polygon points="42,6 54,12 42,18" fill="var(--critical)" opacity={0.9} />
-              <text x={22} y={10} textAnchor="middle" fill="var(--text-dim)" fontSize="6" fontFamily="monospace">
+              <text x={22} y={11} textAnchor="middle" fill="var(--text-dim)" fontSize="7" fontFamily="monospace">
                 {event.protocol?.toUpperCase()}
               </text>
             </svg>
