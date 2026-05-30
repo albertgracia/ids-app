@@ -1,0 +1,18 @@
+{
+  "timestamp": "2026-05-30T12:00:00.000000+0000",
+  "flow_id": 1000001,
+  "in_iface": "eth1",
+  "event_type": "alert",
+  "src_ip": "10.10.1.10",
+  "src_port": 49152,
+  "dest_ip": "172.16.100.20",
+  "dest_port": 502,
+  "proto": "TCP",
+  "app_proto": "modbus",
+  "alert": {
+    "signature_id": 1000001,
+    "signature": "IDS-APP Synthetic TCP scan against OT host",
+    "category": "Attempted Information Leak",
+    "severity": 2
+  }
+}

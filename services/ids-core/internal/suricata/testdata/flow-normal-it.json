@@ -1,0 +1,24 @@
+{
+  "timestamp": "2026-05-30T12:01:00.000000+0000",
+  "flow_id": 2000001,
+  "in_iface": "eth1",
+  "event_type": "flow",
+  "src_ip": "10.10.1.10",
+  "src_port": 54321,
+  "dest_ip": "198.51.100.42",
+  "dest_port": 443,
+  "proto": "TCP",
+  "app_proto": "tls",
+  "flow": {
+    "pkts_toserver": 12,
+    "pkts_toclient": 9,
+    "bytes_toserver": 2400,
+    "bytes_toclient": 5200,
+    "start": "2026-05-30T12:00:50.000000+0000",
+    "end": "2026-05-30T12:01:00.000000+0000",
+    "age": 10,
+    "state": "established",
+    "reason": "timeout",
+    "alerted": false
+  }
+}
