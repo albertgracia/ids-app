@@ -78,6 +78,7 @@ func main() {
 
 	eveIngestor := suricata.NewEVEIngestor(repo)
 	suriHandler := api.NewSuricataHandler(eveIngestor, broadcaster)
+	assetHandler := api.NewAssetHandler(repo)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/healthz", handleHealthz)
@@ -88,6 +89,8 @@ func main() {
 	mux.HandleFunc("/api/v1/suricata/eve", suriHandler.HandleEVE)
 	mux.HandleFunc("/api/v1/suricata/eve/batch", suriHandler.HandleEVEBatch)
 	mux.HandleFunc("/api/v1/events/stream", eventstream.SSEHandler(broadcaster))
+	mux.HandleFunc("/api/v1/assets/classifications", assetHandler.HandleClassifications)
+	mux.HandleFunc("/api/v1/assets/classification", assetHandler.HandleIPClassification)
 
 	server := &http.Server{
 		Addr:    ":" + port,
@@ -143,6 +146,7 @@ func handleStatus(w http.ResponseWriter, r *http.Request) {
 			"suricata_eve_parser",
 			"suricata_eve_ingest",
 			"live_events_stream",
+			"asset_behavior_classifier",
 		},
 	})
 }
