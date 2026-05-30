@@ -1,0 +1,46 @@
+name: ids-dev
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: ids-postgres
+    restart: unless-stopped
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_DB: ids_dev
+      POSTGRES_USER: ids_user
+      POSTGRES_PASSWORD: ids_dev_password
+    volumes:
+      - ids-postgres-data:/var/lib/postgresql/data
+    networks:
+      - ids-dev-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ids_user -d ids_dev"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: ids-redis
+    restart: unless-stopped
+    ports:
+      - "6380:6379"
+    volumes:
+      - ids-redis-data:/data
+    networks:
+      - ids-dev-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  ids-postgres-data:
+  ids-redis-data:
+
+networks:
+  ids-dev-net:
+    driver: bridge

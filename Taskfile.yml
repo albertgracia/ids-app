@@ -1,0 +1,117 @@
+# https://taskfile.dev
+version: "3"
+
+vars:
+  WEB_DIR: apps/web
+  CORE_DIR: services/ids-core
+  ANALYTICS_DIR: services/analytics-api
+  MCP_DIR: services/mcp-server
+  INFRA_DIR: infra
+
+tasks:
+  default:
+    desc: Show available tasks
+    cmd: task --list
+
+  install:
+    desc: Install all dependencies
+    cmds:
+      - cmd: cd {{.WEB_DIR}} && npm install
+        ignore_error: true
+      - cmd: cd {{.ANALYTICS_DIR}} && uv sync
+        ignore_error: true
+      - cmd: cd {{.MCP_DIR}} && uv sync
+        ignore_error: true
+      - cmd: echo "Go dependencies: cd {{.CORE_DIR}} && go mod tidy"
+        ignore_error: true
+
+  dev:web:
+    desc: Start Next.js dev server
+    dir: "{{.WEB_DIR}}"
+    cmd: npm run dev
+
+  dev:core:
+    desc: Start ids-core Go service
+    dir: "{{.CORE_DIR}}"
+    cmd: go run ./cmd/ids-core
+
+  dev:analytics:
+    desc: Start analytics-api FastAPI service
+    dir: "{{.ANALYTICS_DIR}}"
+    cmd: uv run uvicorn ids_analytics.main:app --reload --port 8090
+
+  dev:mcp:
+    desc: Start mcp-server
+    dir: "{{.MCP_DIR}}"
+    cmd: uv run python -m ids_mcp.main
+
+  compose:up:
+    desc: Start development infrastructure (PostgreSQL + Redis)
+    dir: "{{.INFRA_DIR}}"
+    cmd: docker compose -f docker-compose.dev.yml up -d
+
+  compose:down:
+    desc: Stop development infrastructure
+    dir: "{{.INFRA_DIR}}"
+    cmd: docker compose -f docker-compose.dev.yml down
+
+  compose:logs:
+    desc: View infrastructure logs
+    dir: "{{.INFRA_DIR}}"
+    cmd: docker compose -f docker-compose.dev.yml logs -f
+
+  test:
+    desc: Run all tests
+    cmds:
+      - cmd: cd {{.CORE_DIR}} && go test ./...
+        ignore_error: true
+      - cmd: cd {{.ANALYTICS_DIR}} && uv run pytest
+        ignore_error: true
+      - cmd: cd {{.MCP_DIR}} && uv run pytest
+        ignore_error: true
+
+  test:core:
+    desc: Run ids-core tests
+    dir: "{{.CORE_DIR}}"
+    cmd: go test ./... -v
+
+  test:analytics:
+    desc: Run analytics-api tests
+    dir: "{{.ANALYTICS_DIR}}"
+    cmd: uv run pytest -v
+
+  test:mcp:
+    desc: Run mcp-server tests
+    dir: "{{.MCP_DIR}}"
+    cmd: uv run pytest -v
+
+  lint:
+    desc: Run linters
+    cmds:
+      - cmd: cd {{.WEB_DIR}} && npm run lint
+        ignore_error: true
+      - cmd: cd {{.ANALYTICS_DIR}} && uv run ruff check src/
+        ignore_error: true
+      - cmd: cd {{.MCP_DIR}} && uv run ruff check src/
+        ignore_error: true
+
+  typecheck:
+    desc: Run type checks
+    cmds:
+      - cmd: cd {{.WEB_DIR}} && npm run typecheck
+        ignore_error: true
+
+  check:
+    desc: Run all checks (lint, typecheck, test)
+    cmds:
+      - task: lint
+      - task: typecheck
+      - task: test
+
+  clean:
+    desc: Clean build artifacts
+    cmds:
+      - cmd: Remove-Item -Recurse -Force ".next", "dist", "build", "node_modules", ".venv", "__pycache__" -ErrorAction SilentlyContinue
+        platforms: [windows]
+      - cmd: rm -rf .next dist build node_modules .venv __pycache__ 2>/dev/null; true
+        platforms: [linux, darwin]

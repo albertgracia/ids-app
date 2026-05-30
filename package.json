@@ -1,0 +1,16 @@
+{
+  "name": "ids-app",
+  "version": "0.1.0",
+  "private": true,
+  "description": "IDS OT/IT Platform — Monorepo",
+  "scripts": {
+    "dev:web": "cd apps/web && npm run dev",
+    "build": "cd apps/web && npm run build",
+    "lint": "cd apps/web && npm run lint",
+    "typecheck": "cd apps/web && npm run typecheck",
+    "test": "cd apps/web && npm run test"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  }
+}
