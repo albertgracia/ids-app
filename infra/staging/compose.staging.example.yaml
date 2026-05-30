@@ -1,0 +1,133 @@
+# ids-app Staging Compose
+# Copy to /home/albert/docker/ids-app/compose.yaml before deploy
+
+name: ids-app-staging
+
+services:
+  ids-postgres:
+    image: postgres:16-alpine
+    container_name: ids-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-ids_staging}
+      POSTGRES_USER: ${POSTGRES_USER:-ids_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?required}
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data
+    networks:
+      - ids-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-ids_user} -d ${POSTGRES_DB:-ids_staging}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  ids-redis:
+    image: redis:7-alpine
+    container_name: ids-redis
+    restart: unless-stopped
+    command: ["redis-server", "--requirepass", "${REDIS_PASSWORD:?required}"]
+    volumes:
+      - ./data/redis:/data
+    networks:
+      - ids-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  ids-core:
+    image: ghcr.io/albertgracia/ids-app/ids-core:staging
+    container_name: ids-core
+    restart: unless-stopped
+    depends_on:
+      ids-postgres:
+        condition: service_healthy
+      ids-redis:
+        condition: service_healthy
+    environment:
+      IDS_ENV: ${IDS_ENV:-staging}
+      IDS_CORE_PORT: 8088
+      IDS_STORAGE_MODE: postgres
+      DATABASE_URL: ${IDS_CORE_DATABASE_URL}
+      REDIS_URL: ${IDS_REDIS_URL}
+    ports:
+      - "127.0.0.1:${IDS_CORE_PORT:-8088}:8088"
+    networks:
+      - ids-net
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8088/healthz"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  ids-analytics:
+    image: ghcr.io/albertgracia/ids-app/ids-analytics:staging
+    container_name: ids-analytics
+    restart: unless-stopped
+    depends_on:
+      ids-core:
+        condition: service_healthy
+    environment:
+      IDS_ENV: ${IDS_ENV:-staging}
+      IDS_ANALYTICS_PORT: 8090
+      IDS_CORE_BASE_URL: http://ids-core:8088
+    ports:
+      - "127.0.0.1:${IDS_ANALYTICS_PORT:-8090}:8090"
+    networks:
+      - ids-net
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8090/healthz"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  ids-mcp:
+    image: ghcr.io/albertgracia/ids-app/ids-mcp:staging
+    container_name: ids-mcp
+    restart: unless-stopped
+    depends_on:
+      ids-core:
+        condition: service_healthy
+    environment:
+      IDS_ENV: ${IDS_ENV:-staging}
+      IDS_MCP_PORT: 8091
+      IDS_CORE_BASE_URL: http://ids-core:8088
+      IDS_ANALYTICS_BASE_URL: http://ids-analytics:8090
+      IDS_MCP_MODE: read_only
+    ports:
+      - "127.0.0.1:${IDS_MCP_PORT:-8091}:8091"
+    networks:
+      - ids-net
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8091/healthz"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  ids-web:
+    image: ghcr.io/albertgracia/ids-app/ids-web:staging
+    container_name: ids-web
+    restart: unless-stopped
+    depends_on:
+      ids-core:
+        condition: service_healthy
+    environment:
+      IDS_ENV: ${IDS_ENV:-staging}
+      NEXT_PUBLIC_IDS_CORE_URL: http://192.168.1.40:${IDS_CORE_PORT:-8088}
+      NEXT_PUBLIC_ANALYTICS_API_URL: http://192.168.1.40:${IDS_ANALYTICS_PORT:-8090}
+    ports:
+      - "${IDS_WEB_PORT:-3002}:3000"
+    networks:
+      - ids-net
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/api/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+networks:
+  ids-net:
+    name: ids-net
+    driver: bridge
