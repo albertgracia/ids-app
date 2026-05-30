@@ -2,42 +2,10 @@
 
 import { useMemo } from "react";
 import type { EventItem } from "@/lib/types";
+import { ZONES, ZONE_COLORS, SEV_COLORS, inferZone, L, type Zone } from "@/lib/soc-utils";
 
 interface Props {
   events: EventItem[];
-}
-
-const ZONE_ORDER = ["external", "dmz", "it", "ot"] as const;
-const ZONE_COLORS: Record<string, string> = {
-  external: "#f85149",
-  dmz: "#d29922",
-  it: "#58a6ff",
-  ot: "#db6d28",
-  unknown: "#6e7b8c",
-};
-const SEV_COLORS: Record<string, string> = {
-  critical: "#f85149",
-  high: "#d29922",
-  medium: "#db6d28",
-  low: "#58a6ff",
-  info: "#6e7b8c",
-};
-
-function inferZone(ip: string, events: EventItem[]): string {
-  const related = events.filter(
-    (e) => e.source.ip === ip || e.destination.ip === ip
-  );
-  if (related.length === 0) return "unknown";
-  const zoneCounts: Record<string, number> = {};
-  for (const e of related) {
-    if (e.direction === "inbound" && e.source.ip === ip) {
-      zoneCounts["external"] = (zoneCounts["external"] || 0) + 2;
-    }
-    const z = e.zone;
-    if (z) zoneCounts[z] = (zoneCounts[z] || 0) + 1;
-  }
-  const best = Object.entries(zoneCounts).sort((a, b) => b[1] - a[1])[0];
-  return best?.[0] || "unknown";
 }
 
 interface NodeInfo {
@@ -112,10 +80,10 @@ export default function TopologyGraph({ events }: Props) {
 
   const columns = useMemo(() => {
     const cols: Record<string, NodeInfo[]> = {};
-    for (const z of ZONE_ORDER) cols[z] = [];
+    for (const z of ZONES) cols[z] = [];
     cols["unknown"] = [];
     for (const n of nodes) {
-      const z = ZONE_ORDER.includes(n.zone as typeof ZONE_ORDER[number])
+      const z = ZONES.includes(n.zone as Zone)
         ? n.zone
         : "unknown";
       if (cols[z]) cols[z].push(n);
@@ -135,7 +103,7 @@ export default function TopologyGraph({ events }: Props) {
   const MIN_NODE_R = 8;
   const MAX_NODE_R = 22;
 
-  const zoneColumns = [...ZONE_ORDER, "unknown" as const].filter(
+  const zoneColumns = [...ZONES, "unknown" as const].filter(
     (z) => columns[z]?.length > 0
   );
 
@@ -163,7 +131,7 @@ export default function TopologyGraph({ events }: Props) {
       <div className="panel-header">
         Network Topology
         <span className="topo-stats">
-          {nodes.length} nodes · {edges.length} edges
+          {nodes.length} {L.nodes} · {edges.length} {L.edges}
         </span>
       </div>
       <svg
@@ -216,10 +184,10 @@ export default function TopologyGraph({ events }: Props) {
           const fromN = nodeMap.get(edge.from);
           const toN = nodeMap.get(edge.to);
           if (!fromN || !toN) return null;
-          const fromZ = ZONE_ORDER.includes(fromN.zone as typeof ZONE_ORDER[number])
+          const fromZ = ZONES.includes(fromN.zone as Zone)
             ? fromN.zone
             : "unknown";
-          const toZ = ZONE_ORDER.includes(toN.zone as typeof ZONE_ORDER[number])
+          const toZ = ZONES.includes(toN.zone as Zone)
             ? toN.zone
             : "unknown";
           const fromPos = colPositions[fromZ];
@@ -247,7 +215,7 @@ export default function TopologyGraph({ events }: Props) {
         })}
 
         {nodes.map((n) => {
-          const z = ZONE_ORDER.includes(n.zone as typeof ZONE_ORDER[number])
+          const z = ZONES.includes(n.zone as Zone)
             ? n.zone
             : "unknown";
           const pos = colPositions[z];

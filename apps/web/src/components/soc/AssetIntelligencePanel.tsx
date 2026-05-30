@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import type { EventItem } from "@/lib/types";
+import { inferZone } from "@/lib/soc-utils";
 
 interface Props {
   events: EventItem[];
@@ -19,29 +20,6 @@ interface AssetRow {
 }
 
 const ZONE_ORDER = ["external", "dmz", "it", "ot"];
-
-function classifyZone(events: EventItem[], ip: string): string {
-  const related = events.filter(
-    (e) => e.source.ip === ip || e.destination.ip === ip
-  );
-  const zoneCounts: Record<string, number> = {};
-  for (const e of related) {
-    if (e.direction === "inbound" && e.source.ip === ip) {
-      zoneCounts["external"] = (zoneCounts["external"] || 0) + 2;
-    }
-    const z = e.zone;
-    if (z) zoneCounts[z] = (zoneCounts[z] || 0) + 1;
-  }
-  let best = "unknown";
-  let bestCount = 0;
-  for (const [z, c] of Object.entries(zoneCounts)) {
-    if (c > bestCount) {
-      bestCount = c;
-      best = z;
-    }
-  }
-  return best;
-}
 
 export default function AssetIntelligencePanel({ events }: Props) {
   const assets = useMemo(() => {
@@ -76,7 +54,7 @@ export default function AssetIntelligencePanel({ events }: Props) {
 
     const rows: AssetRow[] = [];
     for (const [ip, row] of ipMap) {
-      row.zone = classifyZone(events, ip);
+      row.zone = inferZone(ip, events);
       const ratio = row.critHigh / row.eventCount;
       if (ratio > 0.3) row.criticality = "critical";
       else if (ratio > 0.15) row.criticality = "high";

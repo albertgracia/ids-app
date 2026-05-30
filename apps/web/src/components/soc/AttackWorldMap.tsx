@@ -1,34 +1,19 @@
 "use client";
 
 import type { EventItem } from "@/lib/types";
+import { ZONES, SEV_COLORS, classifyEventZone, type Zone } from "@/lib/soc-utils";
 
 interface Props {
   events: EventItem[];
 }
 
-const ZONES = ["external", "dmz", "it", "ot"] as const;
 const SEVERITIES = ["critical", "high", "medium", "low", "info"] as const;
-const SEV_COLORS: Record<string, string> = {
-  critical: "#f85149",
-  high: "#d29922",
-  medium: "#db6d28",
-  low: "#58a6ff",
-  info: "#6e7b8c",
-};
 const ZONE_LABELS: Record<string, string> = {
   external: "External",
   dmz: "DMZ",
   it: "IT",
   ot: "OT",
 };
-
-function classifyZone(e: EventItem): string {
-  if (e.direction === "inbound" || e.direction === "external") return "external";
-  if (e.zone === "dmz") return "dmz";
-  if (e.zone === "it") return "it";
-  if (e.zone === "ot") return "ot";
-  return "it";
-}
 
 export default function AttackWorldMap({ events }: Props) {
   const zoneSevCounts: Record<string, Record<string, number>> = {};
@@ -37,7 +22,7 @@ export default function AttackWorldMap({ events }: Props) {
     for (const s of SEVERITIES) zoneSevCounts[z][s] = 0;
   }
   for (const e of events) {
-    const z = classifyZone(e);
+    const z = classifyEventZone(e);
     zoneSevCounts[z][e.severity] = (zoneSevCounts[z][e.severity] || 0) + 1;
   }
 
@@ -48,14 +33,14 @@ export default function AttackWorldMap({ events }: Props) {
     }
   }
 
-  const edgePairs: { from: typeof ZONES[number]; to: typeof ZONES[number]; count: number; sev: string }[] = [];
+  const edgePairs: { from: Zone; to: Zone; count: number; sev: string }[] = [];
   for (let i = 0; i < ZONES.length - 1; i++) {
     const from = ZONES[i];
     const to = ZONES[i + 1];
     let count = 0;
     let sevCounts: Record<string, number> = {};
     for (const e of events) {
-      const z = classifyZone(e);
+      const z = classifyEventZone(e);
       if (z === from || z === to) {
         if (e.direction === "lateral" || e.direction === "inbound" || (i > 0 && z === from)) {
           count++;
