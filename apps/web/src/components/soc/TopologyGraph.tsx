@@ -56,8 +56,8 @@ export default function TopologyGraph({ events }: Props) {
     }
 
     const sortedEdges = [...edgeMap.values()].sort((a, b) => b.count - a.count).slice(0, 30);
-    const nodes = [...nodeMap.values()];
-    return { nodes, edges: sortedEdges, nodeMap };
+    const nodeArr = [...nodeMap.values()];
+    return { nodes: nodeArr, edges: sortedEdges, nodeMap };
   }, [events]);
 
   const columns = useMemo(() => {
@@ -75,8 +75,8 @@ export default function TopologyGraph({ events }: Props) {
   const maxEvents = Math.max(1, ...nodes.map((n) => n.eventCount));
   const maxEdges = Math.max(1, ...edges.map((e) => e.count));
 
-  const COL_W = 110;
-  const COL_GAP = 80;
+  const COL_W = 120;
+  const COL_GAP = 70;
   const NODE_GAP = 12;
   const PAD_LEFT = 20;
   const PAD_TOP = 30;
@@ -116,7 +116,7 @@ export default function TopologyGraph({ events }: Props) {
         viewBox={`0 0 ${svgW} ${svgH}`}
         className="topo-svg"
         role="img"
-        aria-label="Topología OT/IT: nodos IP agrupados por zona con enlaces de tráfico"
+        aria-label="Topolog\u00EDa OT/IT: nodos IP agrupados por zona con enlaces de tr\u00E1fico"
         style={{ overflow: "hidden" }}
       >
         <defs>
@@ -125,32 +125,36 @@ export default function TopologyGraph({ events }: Props) {
           </marker>
         </defs>
 
-        {zoneColumns.map((z) => (
-          <g key={`zone-bg-${z}`}>
-            <rect
-              x={colPositions[z].x - COL_W / 2}
-              y={PAD_TOP - 20}
-              width={COL_W}
-              height={((columns[z]?.length || 1) * (MAX_NODE_R * 2 + NODE_GAP)) + 30}
-              rx={3}
-              fill="none"
-              stroke={ZONE_COLORS[z] || "#1e2a3a"}
-              strokeWidth={0.5}
-              strokeDasharray="4,3"
-              opacity={0.4}
-            />
-            <text
-              x={colPositions[z].x}
-              y={PAD_TOP - 24}
-              textAnchor="middle"
-              fill={ZONE_COLORS[z] || "#6e7b8c"}
-              fontSize={9}
-              fontWeight={700}
-            >
-              {z.toUpperCase()}
-            </text>
-          </g>
-        ))}
+        {zoneColumns.map((z) => {
+          const colNodes = columns[z] || [];
+          const h = colNodes.length * (MAX_NODE_R * 2 + NODE_GAP) + 30;
+          return (
+            <g key={`zone-bg-${z}`}>
+              <rect
+                x={colPositions[z].x - COL_W / 2}
+                y={PAD_TOP - 20}
+                width={COL_W}
+                height={h}
+                rx={3}
+                fill="none"
+                stroke={ZONE_COLORS[z] || "#1e2a3a"}
+                strokeWidth={0.6}
+                strokeDasharray="3,3"
+                opacity={0.35}
+              />
+              <text
+                x={colPositions[z].x}
+                y={PAD_TOP - 24}
+                textAnchor="middle"
+                fill={ZONE_COLORS[z] || "#6e7b8c"}
+                fontSize={9}
+                fontWeight={700}
+              >
+                {z.toUpperCase()}
+              </text>
+            </g>
+          );
+        })}
 
         {edges.map((edge) => {
           const fromN = nodeMap.get(edge.from);
@@ -182,7 +186,7 @@ export default function TopologyGraph({ events }: Props) {
           );
         })}
 
-        {nodes.map((n) => {
+        {nodes.map((n, ni) => {
           const z = ZONES.includes(n.zone as Zone) ? n.zone : "unknown";
           const pos = colPositions[z];
           if (!pos) return null;
@@ -194,25 +198,89 @@ export default function TopologyGraph({ events }: Props) {
           const zoneColor = ZONE_COLORS[n.zone] || ZONE_COLORS["unknown"];
           const isCritical = n.criticalCount > 0;
           return (
-            <g key={`node-${n.ip}`}>
+            <g
+              key={`node-${n.ip}`}
+              className={`topo-node topo-settle-stagger-${ni % 8}`}
+            >
+              {/* Pulse ring for critical/high nodes */}
               {isCritical && (
-                <circle cx={cx} cy={cy} r={r + 4} fill="none" stroke="#f85149" strokeWidth={1} opacity={0.5}>
-                  <animate attributeName="opacity" values="0.5;0.1;0.5" dur="2s" repeatCount="indefinite" />
-                </circle>
+                <>
+                  <circle
+                    cx={cx}
+                    cy={cy}
+                    r={r + 3}
+                    fill="none"
+                    stroke="#f85149"
+                    strokeWidth={1}
+                    opacity={0.6}
+                  >
+                    <animate
+                      attributeName="r"
+                      values={`${r + 3};${r + 12}`}
+                      dur="2s"
+                      repeatCount="indefinite"
+                    />
+                    <animate
+                      attributeName="opacity"
+                      values="0.6;0"
+                      dur="2s"
+                      repeatCount="indefinite"
+                    />
+                  </circle>
+                  <circle
+                    cx={cx}
+                    cy={cy}
+                    r={r + 3}
+                    fill="none"
+                    stroke="#f85149"
+                    strokeWidth={1}
+                    opacity={0.4}
+                  >
+                    <animate
+                      attributeName="r"
+                      values={`${r + 3};${r + 12}`}
+                      dur="2s"
+                      begin="1s"
+                      repeatCount="indefinite"
+                    />
+                    <animate
+                      attributeName="opacity"
+                      values="0.4;0"
+                      dur="2s"
+                      begin="1s"
+                      repeatCount="indefinite"
+                    />
+                  </circle>
+                </>
               )}
-              <circle cx={cx} cy={cy} r={r} fill={zoneColor} opacity={0.2} stroke={zoneColor} strokeWidth={1.2} />
+              <circle
+                cx={cx}
+                cy={cy}
+                r={r}
+                fill={zoneColor}
+                opacity={0.22}
+                stroke={zoneColor}
+                strokeWidth={1.2}
+              />
               <text
                 x={cx}
                 y={cy + 1}
                 textAnchor="middle"
                 fill="#c9d1d9"
                 fontSize={Math.max(7, Math.min(10, r * 0.6))}
-                fontFamily="monospace"
+                fontFamily="JetBrains Mono, Cascadia Code, Fira Code, Consolas, monospace"
               >
                 {n.ip.length > 11 ? n.ip.slice(0, 10) + "\u2026" : n.ip}
               </text>
-              <text x={cx} y={cy + r + 10} textAnchor="middle" fill="#6e7b8c" fontSize={7} fontFamily="monospace">
-                {n.eventCount}e
+              <text
+                x={cx}
+                y={cy + r + 10}
+                textAnchor="middle"
+                fill="#6e7b8c"
+                fontSize={7}
+                fontFamily="JetBrains Mono, Cascadia Code, Fira Code, Consolas, monospace"
+              >
+                {n.eventCount}e {isCritical ? `\u00B7 ${n.criticalCount}c` : ""}
               </text>
             </g>
           );

@@ -21,6 +21,9 @@ export default function EventInspectorPanel({ event, score, scoring, onScore, sc
     );
   }
 
+  const sevLabel = L.severity[event.severity as keyof typeof L.severity] ?? event.severity;
+  const zoneLabel = event.zone ? L.zones[event.zone as keyof typeof L.zones] ?? event.zone : "?";
+
   return (
     <div className="panel inspector-panel">
       <div className="panel-header">
@@ -41,19 +44,19 @@ export default function EventInspectorPanel({ event, score, scoring, onScore, sc
         </div>
         <div>
           <span className="ilabel">{L.events.severity}</span>
-          <span className={`sev-${event.severity}`}>{event.severity}</span>
+          <span className={`sev-${event.severity}`}>{sevLabel}</span>
         </div>
         <div>
           <span className="ilabel">{L.events.type}</span>
-          <span>{event.type}</span>
+          <span>{event.type?.replace(/_/g, " ")}</span>
         </div>
         <div>
           <span className="ilabel">{L.events.protocol}</span>
-          <span>{event.protocol}</span>
+          <code className="cell-mono">{event.protocol}</code>
         </div>
         <div>
           <span className="ilabel">{L.events.zone}</span>
-          <span>{event.zone}</span>
+          <span>{zoneLabel}</span>
         </div>
         <div>
           <span className="ilabel">{L.events.direction}</span>
@@ -79,6 +82,7 @@ export default function EventInspectorPanel({ event, score, scoring, onScore, sc
 
       {event.tags && event.tags.length > 0 && (
         <div className="inspector-tags">
+          <span className="ilabel" style={{ marginTop: 0 }}>{L.events.tags}:</span>
           {event.tags.map((t) => (
             <span key={t} className="tag">{t}</span>
           ))}

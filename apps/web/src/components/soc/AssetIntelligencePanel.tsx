@@ -76,12 +76,12 @@ export default function AssetIntelligencePanel({ events }: Props) {
     return rows;
   }, [events]);
 
-  const critColor = (c: string) => {
+  const critSevClass = (c: string) => {
     switch (c) {
-      case "critical": return "var(--critical)";
-      case "high": return "var(--high)";
-      case "medium": return "var(--medium)";
-      default: return "var(--low)";
+      case "critical": return "sev-critical";
+      case "high": return "sev-high";
+      case "medium": return "sev-medium";
+      default: return "sev-low";
     }
   };
 
@@ -118,21 +118,23 @@ export default function AssetIntelligencePanel({ events }: Props) {
               <tr key={a.ip}>
                 <td className="cell-mono">{a.ip}</td>
                 <td>
-                  <span className={`zone-tag zone-${a.zone}`}>{a.zone}</span>
+                  <span className={`zone-tag zone-${a.zone}`}>
+                    {a.zone}
+                  </span>
                 </td>
                 <td className="cell-mono">{a.eventCount}</td>
                 <td className={`cell-mono ${a.critHigh > 0 ? "sev-high" : ""}`}>
                   {a.critHigh}
                 </td>
                 <td>
-                  <span
-                    className="sev-badge"
-                    style={{
-                      background: `${critColor(a.criticality)}22`,
-                      color: critColor(a.criticality),
-                    }}
-                  >
-                    {a.criticality}
+                  <span className={`sev-badge-expanded ${critSevClass(a.criticality)}`}>
+                    {a.criticality === "critical"
+                      ? L.severity.critical
+                      : a.criticality === "high"
+                        ? L.severity.high
+                        : a.criticality === "medium"
+                          ? L.severity.medium
+                          : L.severity.low}
                   </span>
                 </td>
                 <td className="cell-mono cell-protos">{a.protocols}</td>

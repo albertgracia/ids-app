@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import type { AnalyticsStatus, CoreStatus, EventItem, ScoreResponse } from "@/lib/types";
 import { getStatus, getRecentEvents } from "@/lib/ids-core";
 import { getAnalyticsStatus, scoreEvent } from "@/lib/analytics-api";
@@ -34,10 +34,18 @@ export default function Home() {
   const [scoreError, setScoreError] = useState("");
   const [lastUpdated, setLastUpdated] = useState(new Date());
 
+  const criticalCount = useMemo(
+    () => events.filter((e) => e.severity === "critical").length,
+    [events]
+  );
+  const highCount = useMemo(
+    () => events.filter((e) => e.severity === "high").length,
+    [events]
+  );
+
   const fetchAll = useCallback(async () => {
     if (!mountedRef.current) return;
 
-    // Abort any previous polling cycle's pending resolutions
     abortRef.current?.abort();
     const controller = new AbortController();
     abortRef.current = controller;
@@ -84,7 +92,7 @@ export default function Home() {
       setEvents(items);
       setEventsLoading(false);
     } catch (_) {
-      /* stale abort — ignore */
+      /* stale abort */
     }
 
     if (mountedRef.current && !signal.aborted) {
@@ -130,43 +138,36 @@ export default function Home() {
 
   return (
     <main className="soc-dashboard">
+      {/* Row 1: Header */}
       <SocHeader
         coreStatus={coreStatus}
         coreError={coreError}
         analyticsStatus={analyticsStatus}
         analyticsError={analyticsError}
         lastUpdated={lastUpdated}
+        criticalCount={criticalCount}
+        highCount={highCount}
       />
 
+      {/* Row 2: KPIs — 7 */}
       <ExecutiveKpiStrip events={events} coreStatus={coreStatus} />
 
-      <div className="soc-row">
+      {/* Row 3: World Threat Map (60%) | Topology Graph (40%) */}
+      <div className="soc-row-6040">
         <AttackWorldMap events={events} />
         <TopologyGraph events={events} />
       </div>
 
-      <div className="soc-row">
+      {/* Row 4: Event Timeline (full width) */}
+      <div className="soc-row-full">
         <EventTimelinePanel events={events} />
-        <ThreatRadarGrid events={events} />
       </div>
 
-      <div className="soc-row">
+      {/* Row 5: Radar | Assets | IoCs | Severity Distribution */}
+      <div className="soc-row-4col">
+        <ThreatRadarGrid events={events} />
         <AssetIntelligencePanel events={events} />
         <IocThreatPanel events={events} />
-      </div>
-
-      <div className="soc-row-full">
-        <RecentEventsPanel events={events} selectedId={selectedEvent?.id ?? null} onSelect={handleSelect} />
-      </div>
-
-      <div className="soc-row">
-        <EventInspectorPanel
-          event={selectedEvent}
-          score={score}
-          scoring={scoring}
-          onScore={handleScore}
-          scoreError={scoreError}
-        />
         <div className="panel sev-overview-panel">
           <div className="panel-header">{L.panels.severityDistribution}</div>
           {SEV_KEYS.map((s) => {
@@ -197,6 +198,26 @@ export default function Home() {
             <span>{L.kpi.itEvents}: {events.filter((e) => e.zone === "it").length}</span>
           </div>
         </div>
+      </div>
+
+      {/* Row 6: Recent Events (full width) */}
+      <div className="soc-row-full">
+        <RecentEventsPanel
+          events={events}
+          selectedId={selectedEvent?.id ?? null}
+          onSelect={handleSelect}
+        />
+      </div>
+
+      {/* Row 7: Event Inspector (full width, always visible — shows placeholder when no event) */}
+      <div className="soc-row-full">
+        <EventInspectorPanel
+          event={selectedEvent}
+          score={score}
+          scoring={scoring}
+          onScore={handleScore}
+          scoreError={scoreError}
+        />
       </div>
     </main>
   );

@@ -11,8 +11,8 @@ interface Props {
 const SEVERITIES = ["critical", "high", "medium", "low", "info"] as const;
 const SEV_COLORS: Record<string, string> = {
   critical: "#f85149",
-  high: "#d29922",
-  medium: "#db6d28",
+  high: "#eab308",
+  medium: "#d97706",
   low: "#58a6ff",
   info: "#3a4455",
 };
@@ -63,18 +63,21 @@ export default function EventTimelinePanel({ events }: Props) {
 
   const maxY = Math.max(1, ...buckets.map((b) => b.total));
 
-  const BAR_W = 8;
+  const BAR_W = 10;
   const BAR_GAP = 2;
-  const PAD_LEFT = 10;
+  const PAD_LEFT = 35;
+  const PAD_RIGHT = 10;
   const PAD_BOTTOM = 28;
-  const PAD_TOP = 5;
-  const CHART_H = 120;
+  const PAD_TOP = 10;
+  const CHART_H = 140;
   const totalBarW = BAR_W + BAR_GAP;
-  const svgW = PAD_LEFT + buckets.length * totalBarW + 10;
+  const svgW = PAD_LEFT + buckets.length * totalBarW + PAD_RIGHT;
   const svgH = PAD_TOP + CHART_H + PAD_BOTTOM;
 
-  const tickCount = 4;
+  const tickCount = 5;
   const yTicks = Array.from({ length: tickCount + 1 }, (_, i) => Math.round((maxY / tickCount) * i));
+
+  const lastBucketIdx = buckets.length - 1;
 
   return (
     <div className="panel timeline-panel">
@@ -91,21 +94,23 @@ export default function EventTimelinePanel({ events }: Props) {
           viewBox={`0 0 ${svgW} ${svgH}`}
           className="timeline-svg"
           role="img"
-          aria-label="Línea temporal de eventos con barras apiladas por severidad"
+          aria-label="L\u00EDnea temporal de eventos con barras apiladas por severidad"
           style={{ overflow: "hidden" }}
         >
+          {/* Grid lines */}
           {yTicks.map((val) => {
             const y = PAD_TOP + CHART_H - (val / maxY) * CHART_H;
             return (
               <g key={`tick-${val}`}>
-                <line x1={PAD_LEFT - 3} y1={y} x2={svgW} y2={y} stroke="#1e2a3a" strokeWidth={0.5} />
-                <text x={PAD_LEFT - 5} y={y + 3} textAnchor="end" fill="#6e7b8c" fontSize={7} fontFamily="monospace">
+                <line x1={PAD_LEFT} y1={y} x2={svgW - PAD_RIGHT} y2={y} stroke="#1e2a3a" strokeWidth={0.5} strokeDasharray="2,4" />
+                <text x={PAD_LEFT - 5} y={y + 3} textAnchor="end" fill="#6e7b8c" fontSize={8} fontFamily="JetBrains Mono, Cascadia Code, Fira Code, Consolas, monospace">
                   {val}
                 </text>
               </g>
             );
           })}
 
+          {/* Bars */}
           {buckets.map((b, bi) => {
             if (b.total === 0) return null;
             let yOffset = PAD_TOP + CHART_H;
@@ -113,13 +118,22 @@ export default function EventTimelinePanel({ events }: Props) {
             for (const sev of SEVERITIES) {
               const count = b.counts[sev];
               if (count === 0) continue;
-              const h = (count / maxY) * CHART_H;
+              const h = Math.max(1, (count / maxY) * CHART_H);
               yOffset -= h;
               const x = PAD_LEFT + bi * totalBarW;
               els.push(
-                <rect key={`${bi}-${sev}`} x={x} y={yOffset} width={BAR_W} height={h} fill={SEV_COLORS[sev]} rx={0.5}>
+                <rect
+                  key={`${bi}-${sev}`}
+                  x={x}
+                  y={yOffset}
+                  width={BAR_W}
+                  height={h}
+                  fill={SEV_COLORS[sev]}
+                  rx={1}
+                  className={bi >= lastBucketIdx - 2 ? "timeline-bar-new" : ""}
+                >
                   <title>
-                    {b.label}: {sev} \u00d7 {count}
+                    {b.label}: {L.severity[sev]} \u00D7 {count}
                   </title>
                 </rect>
               );
@@ -127,6 +141,7 @@ export default function EventTimelinePanel({ events }: Props) {
             return <g key={`bar-${bi}`}>{els}</g>;
           })}
 
+          {/* Horizontal labels (no rotation) */}
           {buckets
             .filter((_, i) => i % Math.max(1, Math.floor(buckets.length / 8)) === 0)
             .map((b) => {
@@ -137,17 +152,43 @@ export default function EventTimelinePanel({ events }: Props) {
                 <text
                   key={`label-${bi}`}
                   x={x}
-                  y={svgH - PAD_BOTTOM + 14}
+                  y={svgH - 8}
                   textAnchor="middle"
                   fill="#6e7b8c"
                   fontSize={7}
-                  fontFamily="monospace"
-                  transform={`rotate(-30, ${x}, ${svgH - PAD_BOTTOM + 14})`}
+                  fontFamily="JetBrains Mono, Cascadia Code, Fira Code, Consolas, monospace"
                 >
                   {b.label}
                 </text>
               );
             })}
+
+          {/* Live "now" marker on last bucket */}
+          {buckets.length > 0 && (
+            <line
+              x1={PAD_LEFT + lastBucketIdx * totalBarW + BAR_W / 2}
+              y1={PAD_TOP}
+              x2={PAD_LEFT + lastBucketIdx * totalBarW + BAR_W / 2}
+              y2={PAD_TOP + CHART_H}
+              stroke="var(--accent)"
+              strokeWidth={1.5}
+              strokeDasharray="3,2"
+              className="timeline-now-marker"
+            />
+          )}
+
+          {buckets.length > 0 && (
+            <text
+              x={PAD_LEFT + lastBucketIdx * totalBarW + BAR_W / 2}
+              y={PAD_TOP - 2}
+              textAnchor="middle"
+              fill="var(--accent)"
+              fontSize={7}
+              fontWeight={700}
+            >
+              ahora
+            </text>
+          )}
         </svg>
       )}
 

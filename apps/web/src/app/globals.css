@@ -1,4 +1,4 @@
-/* ===== SOC Dashboard — Enterprise Dark Console ===== */
+/* ===== SOC Dashboard — Enterprise Dark Console v2 ===== */
 
 :root {
   --bg: #0a0e14;
@@ -8,11 +8,13 @@
   --text-dim: #6e7b8c;
   --accent: #58a6ff;
   --critical: #f85149;
-  --high: #d29922;
-  --medium: #db6d28;
+  --high: #eab308;
+  --medium: #d97706;
   --low: #58a6ff;
   --info: #6e7b8c;
   --ok: #3fb950;
+  --healthy: #3fb950;
+  --warning: #d29922;
 }
 
 *,
@@ -36,7 +38,7 @@ body {
 .soc-dashboard {
   max-width: min(100%, 1920px);
   margin: 0 auto;
-  padding: 1rem;
+  padding: 0.75rem;
 }
 
 /* ===== Layout Grid ===== */
@@ -52,8 +54,36 @@ body {
   margin-bottom: 0.75rem;
 }
 
+/* Row 3: Map(60%) | Topology(40%) */
+.soc-row-6040 {
+  display: grid;
+  grid-template-columns: 3fr 2fr;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+/* Row 5: Radar | Assets | IoCs | SevDist */
+.soc-row-4col {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
 @media (max-width: 1099px) {
   .soc-row {
+    grid-template-columns: 1fr;
+  }
+  .soc-row-6040 {
+    grid-template-columns: 1fr;
+  }
+  .soc-row-4col {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 699px) {
+  .soc-row-4col {
     grid-template-columns: 1fr;
   }
 }
@@ -103,7 +133,7 @@ body {
   border-radius: 4px;
   margin-bottom: 0.75rem;
   flex-wrap: wrap;
-  gap: 0.5rem;
+  gap: 0.75rem;
 }
 
 .soc-header-left {
@@ -124,7 +154,7 @@ body {
 }
 
 .soc-title {
-  font-size: 1.1rem;
+  font-size: 1.2rem;
   font-weight: 700;
   margin: 0;
   color: var(--text);
@@ -141,6 +171,7 @@ body {
   display: flex;
   gap: 0.5rem;
   flex-wrap: wrap;
+  align-items: center;
 }
 
 .soc-svc-badge {
@@ -184,26 +215,139 @@ body {
 }
 
 .soc-value {
-  font-family: monospace;
+  font-family: "JetBrains Mono", "Cascadia Code", "Fira Code", Consolas, monospace;
   font-size: 0.7rem;
   color: var(--text);
+}
+
+/* ===== Health LED ===== */
+
+.health-led-group {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.health-led {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--text-dim);
+  box-shadow: 0 0 4px var(--text-dim);
+  transition: background 0.3s, box-shadow 0.3s;
+}
+
+.health-led.healthy {
+  background: var(--healthy);
+  box-shadow: 0 0 6px var(--healthy);
+  animation: led-pulse-healthy 3s ease-in-out infinite;
+}
+
+.health-led.warning {
+  background: var(--warning);
+  box-shadow: 0 0 8px var(--warning);
+  animation: led-pulse-warning 1.5s ease-in-out infinite;
+}
+
+.health-led.critical {
+  background: var(--critical);
+  box-shadow: 0 0 10px var(--critical);
+  animation: led-pulse-critical 0.8s ease-in-out infinite;
+}
+
+@keyframes led-pulse-healthy {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+@keyframes led-pulse-warning {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+@keyframes led-pulse-critical {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.2; }
+}
+
+/* ===== Alarm Badge ===== */
+
+.alarm-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.15rem 0.55rem;
+  border-radius: 3px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  background: rgba(248, 81, 73, 0.18);
+  color: var(--critical);
+  white-space: nowrap;
+}
+
+.alarm-badge.warn {
+  background: rgba(210, 153, 34, 0.18);
+  color: var(--warning);
+}
+
+/* ===== Updated ago ===== */
+
+.updated-ago {
+  font-family: "JetBrains Mono", "Cascadia Code", "Fira Code", Consolas, monospace;
+  font-size: 0.65rem;
+  color: var(--text-dim);
+  white-space: nowrap;
 }
 
 /* ===== KPI Strip ===== */
 
 .kpi-strip {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  grid-template-columns: repeat(7, 1fr);
   gap: 0.5rem;
   margin-bottom: 0.75rem;
+}
+
+@media (max-width: 1099px) {
+  .kpi-strip {
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  }
+}
+
+@media (max-width: 699px) {
+  .kpi-strip {
+    grid-template-columns: 1fr 1fr;
+  }
 }
 
 .kpi-card {
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: 4px;
-  padding: 0.75rem;
+  padding: 0.65rem;
   text-align: center;
+  transition: background 0.3s;
+}
+
+.kpi-card.flash-critical {
+  animation: kpi-flash 1.5s ease-out;
+}
+
+@keyframes kpi-flash {
+  0% { background: rgba(248, 81, 73, 0.35); }
+  80% { background: rgba(248, 81, 73, 0.05); }
+  100% { background: var(--bg-card); }
+}
+
+.kpi-card.flash-high {
+  animation: kpi-flash-high 1.5s ease-out;
+}
+
+@keyframes kpi-flash-high {
+  0% { background: rgba(234, 179, 8, 0.35); }
+  80% { background: rgba(234, 179, 8, 0.05); }
+  100% { background: var(--bg-card); }
 }
 
 .kpi-value-row {
@@ -214,10 +358,15 @@ body {
 }
 
 .kpi-value {
-  font-size: 1.3rem;
-  font-weight: 700;
+  font-size: 1.5rem;
+  font-weight: 800;
   font-variant-numeric: tabular-nums;
   color: var(--text);
+  line-height: 1;
+}
+
+.kpi-value.kpi-critical {
+  color: var(--critical);
 }
 
 .kpi-value small {
@@ -269,6 +418,52 @@ body {
   color: var(--text-dim);
 }
 
+/* Node pulse ring animation */
+@keyframes node-pulse {
+  0% {
+    transform: scale(1);
+    opacity: 0.6;
+  }
+  100% {
+    transform: scale(2.2);
+    opacity: 0;
+  }
+}
+
+.node-pulse-ring {
+  transform-origin: center;
+  animation: node-pulse 2s ease-out infinite;
+}
+
+/* Topology settle animation */
+@keyframes topo-settle {
+  0% {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  80% {
+    opacity: 0.95;
+    transform: translateY(-1px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.topo-node {
+  animation: topo-settle 0.6s ease-out both;
+}
+
+.topo-settle-stagger-0 { animation-delay: 0s; }
+.topo-settle-stagger-1 { animation-delay: 0.05s; }
+.topo-settle-stagger-2 { animation-delay: 0.1s; }
+.topo-settle-stagger-3 { animation-delay: 0.15s; }
+.topo-settle-stagger-4 { animation-delay: 0.2s; }
+.topo-settle-stagger-5 { animation-delay: 0.25s; }
+.topo-settle-stagger-6 { animation-delay: 0.3s; }
+.topo-settle-stagger-7 { animation-delay: 0.35s; }
+
 /* ===== Event Timeline ===== */
 
 .timeline-panel .timeline-svg {
@@ -277,17 +472,33 @@ body {
   overflow: hidden;
 }
 
-.timeline-panel .timeline-legend {
+@keyframes timeline-fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.timeline-bar-new {
+  animation: timeline-fadeIn 0.3s ease-out;
+}
+
+.timeline-legend {
   display: flex;
   gap: 0.75rem;
-  margin-top: 0.4rem;
+  margin-top: 0.5rem;
   font-size: 0.65rem;
+  flex-wrap: wrap;
 }
 
 .tl-legend-item {
   display: flex;
   align-items: center;
-  gap: 0.2rem;
+  gap: 0.25rem;
   color: var(--text-dim);
 }
 
@@ -298,12 +509,39 @@ body {
   display: inline-block;
 }
 
+/* Live "now" marker */
+.timeline-now-marker {
+  animation: now-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes now-pulse {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+
 /* ===== Threat Radar ===== */
 
 .radar-panel .radar-svg {
   width: 100%;
   height: auto;
   overflow: hidden;
+}
+
+@keyframes radar-rotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.radar-sweep {
+  transform-origin: center;
+  animation: radar-rotate 60s linear infinite;
+}
+
+.radar-score-total {
+  font-size: 1.8rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  text-anchor: middle;
 }
 
 /* ===== Asset Intelligence ===== */
@@ -496,6 +734,43 @@ body {
   color: var(--info);
 }
 
+/* Badge expandido (palabra completa, no letra) */
+.sev-badge-expanded {
+  display: inline-block;
+  padding: 0.1rem 0.45rem;
+  border-radius: 3px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  white-space: nowrap;
+  letter-spacing: 0.03em;
+}
+
+.sev-badge-expanded.sev-critical {
+  background: rgba(248, 81, 73, 0.2);
+  color: var(--critical);
+}
+
+.sev-badge-expanded.sev-high {
+  background: rgba(234, 179, 8, 0.2);
+  color: var(--high);
+}
+
+.sev-badge-expanded.sev-medium {
+  background: rgba(217, 119, 6, 0.2);
+  color: var(--medium);
+}
+
+.sev-badge-expanded.sev-low {
+  background: rgba(88, 166, 255, 0.2);
+  color: var(--low);
+}
+
+.sev-badge-expanded.sev-info {
+  background: rgba(110, 123, 140, 0.2);
+  color: var(--info);
+}
+
+/* Legacy badge (compact) */
 .sev-badge {
   padding: 0.08rem 0.3rem;
   border-radius: 2px;
@@ -509,12 +784,12 @@ body {
 }
 
 .sev-badge.sev-high {
-  background: rgba(210, 153, 34, 0.2);
+  background: rgba(234, 179, 8, 0.2);
   color: var(--high);
 }
 
 .sev-badge.sev-medium {
-  background: rgba(219, 109, 40, 0.2);
+  background: rgba(217, 119, 6, 0.2);
   color: var(--medium);
 }
 
@@ -554,6 +829,7 @@ body {
   color: var(--text-dim);
   font-weight: 600;
   white-space: nowrap;
+  font-size: 0.65rem;
 }
 
 .recent-table td {
@@ -561,20 +837,47 @@ body {
   border-bottom: 1px solid var(--border);
 }
 
-.recent-row {
+/* Filas coloreadas por severidad (border-left 3px) */
+.event-row {
   cursor: pointer;
+  transition: background 0.2s;
 }
 
-.recent-row:hover {
-  background: var(--bg);
+.event-row.sev-critical-row {
+  border-left: 3px solid var(--critical);
 }
 
-.recent-row.selected {
-  background: rgba(88, 166, 255, 0.08);
+.event-row.sev-high-row {
+  border-left: 3px solid var(--high);
+}
+
+.event-row.sev-medium-row {
+  border-left: 3px solid var(--medium);
+}
+
+.event-row.sev-low-row {
+  border-left: 3px solid var(--low);
+}
+
+.event-row.sev-info-row {
+  border-left: 3px solid var(--info);
+}
+
+.event-row:hover {
+  background: rgba(88, 166, 255, 0.06);
+}
+
+.event-row.selected {
+  background: rgba(88, 166, 255, 0.1);
+}
+
+.event-row.sev-critical-row:hover,
+.event-row.sev-critical-row.selected {
+  background: rgba(248, 81, 73, 0.08);
 }
 
 .cell-mono {
-  font-family: monospace;
+  font-family: "JetBrains Mono", "Cascadia Code", "Fira Code", Consolas, monospace;
   font-size: 0.65rem;
 }
 
@@ -583,6 +886,16 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.cell-new-indicator {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  margin-right: 0.3rem;
+  vertical-align: middle;
 }
 
 /* ===== Event Inspector ===== */
@@ -699,4 +1012,21 @@ body {
   font-size: 0.8rem;
   padding: 1rem;
   text-align: center;
+}
+
+/* ===== Utility classes ===== */
+
+.mono {
+  font-family: "JetBrains Mono", "Cascadia Code", "Fira Code", Consolas, monospace;
+}
+
+.hidden {
+  display: none;
+}
+
+/* ===== GeoIP Legend ===== */
+.map-legend {
+  font-size: 0.55rem;
+  color: var(--text-dim);
+  font-style: italic;
 }

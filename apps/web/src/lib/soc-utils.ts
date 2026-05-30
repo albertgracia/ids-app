@@ -5,8 +5,8 @@ export type Zone = (typeof ZONES)[number];
 
 export const SEV_COLORS: Record<string, string> = {
   critical: "#f85149",
-  high: "#d29922",
-  medium: "#db6d28",
+  high: "#eab308",
+  medium: "#d97706",
   low: "#58a6ff",
   info: "#6e7b8c",
 };

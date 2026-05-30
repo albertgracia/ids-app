@@ -25,6 +25,16 @@ interface IocRow {
   destIps: Set<string>;
 }
 
+function sevClass(s: string) {
+  switch (s) {
+    case "critical": return "sev-critical";
+    case "high": return "sev-high";
+    case "medium": return "sev-medium";
+    case "low": return "sev-low";
+    default: return "sev-info";
+  }
+}
+
 export default function IocThreatPanel({ events }: Props) {
   const iocs = useMemo(() => {
     const map = new Map<string, IocRow>();
@@ -90,8 +100,8 @@ export default function IocThreatPanel({ events }: Props) {
                   </span>
                 </td>
                 <td>
-                  <span className={`sev-badge sev-${ioc.severity}`}>
-                    {ioc.severity.slice(0, 1).toUpperCase()}
+                  <span className={`sev-badge-expanded ${sevClass(ioc.severity)}`}>
+                    {L.severity[ioc.severity as keyof typeof L.severity]}
                   </span>
                 </td>
                 <td className="cell-mono">{ioc.count}</td>

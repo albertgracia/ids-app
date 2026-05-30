@@ -10,6 +10,10 @@ interface Props {
 
 const SEVERITIES = ["critical", "high", "medium", "low", "info"] as const;
 
+function zoneLabel(zone: string): string {
+  return ZONE_LABELS[zone] ?? zone;
+}
+
 export default function AttackWorldMap({ events }: Props) {
   const zoneSevCounts: Record<string, Record<string, number>> = {};
   for (const z of ZONES) {
@@ -47,35 +51,38 @@ export default function AttackWorldMap({ events }: Props) {
     edgePairs.push({ from, to, count, sev: topSev });
   }
 
-  const CELL_W = 70;
-  const CELL_H = 28;
-  const GAP = 4;
+  const CELL_W = 72;
+  const CELL_H = 26;
+  const GAP = 3;
   const PAD_LEFT = 80;
   const PAD_TOP = 30;
-  const COL_GAP = 30;
-  const svgH = PAD_TOP + SEVERITIES.length * (CELL_H + GAP) + 60;
+  const COL_GAP = 24;
+  const svgH = PAD_TOP + SEVERITIES.length * (CELL_H + GAP) + 70;
 
   return (
     <div className="panel awm-panel">
-      <div className="panel-header">{L.panels.attackMap}</div>
+      <div className="panel-header">
+        {L.panels.attackMap}
+        <span className="map-legend">GeoIP sint\u00E9tico \u2014 staging</span>
+      </div>
       <svg
         viewBox={`0 0 ${PAD_LEFT + ZONES.length * CELL_W + (ZONES.length - 1) * COL_GAP + 20} ${svgH}`}
         className="awm-svg"
         role="img"
-        aria-label="Mapa táctico de ataques: heatmap de amenazas por zona y severidad"
+        aria-label="Mapa t\u00E1ctico de ataques: heatmap de amenazas por zona y severidad"
         style={{ overflow: "hidden" }}
       >
         {SEVERITIES.map((sev, si) => (
           <text
             key={sev}
-            x={PAD_LEFT - 8}
-            y={PAD_TOP + si * (CELL_H + GAP) + CELL_H / 2 + 4}
+            x={PAD_LEFT - 6}
+            y={PAD_TOP + si * (CELL_H + GAP) + CELL_H / 2 + 3}
             textAnchor="end"
             fill={SEV_COLORS[sev]}
-            fontSize={9}
+            fontSize={8}
             fontWeight={600}
           >
-            {sev.toUpperCase()}
+            {L.severity[sev]}
           </text>
         ))}
 
@@ -85,17 +92,17 @@ export default function AttackWorldMap({ events }: Props) {
             <g key={zone}>
               <text
                 x={colX + CELL_W / 2}
-                y={PAD_TOP - 8}
+                y={PAD_TOP - 10}
                 textAnchor="middle"
-                fill="#6e7b8c"
+                fill="#c9d1d9"
                 fontSize={10}
                 fontWeight={700}
               >
-                {ZONE_LABELS[zone]}
+                {zoneLabel(zone)}
               </text>
               {SEVERITIES.map((sev, si) => {
                 const count = zoneSevCounts[zone][sev];
-                const opacity = globalMax > 0 ? 0.08 + (count / globalMax) * 0.85 : 0.08;
+                const opacity = globalMax > 0 ? 0.1 + (count / globalMax) * 0.85 : 0.1;
                 const y = PAD_TOP + si * (CELL_H + GAP);
                 return (
                   <g key={`${zone}-${sev}`}>
@@ -108,7 +115,7 @@ export default function AttackWorldMap({ events }: Props) {
                       fill={SEV_COLORS[sev]}
                       opacity={opacity}
                       stroke={count > 0 ? SEV_COLORS[sev] : "#1e2a3a"}
-                      strokeWidth={0.5}
+                      strokeWidth={count > 0 ? 1 : 0.5}
                     />
                     <text
                       x={colX + CELL_W / 2}
@@ -128,29 +135,43 @@ export default function AttackWorldMap({ events }: Props) {
           );
         })}
 
+        {/* Connected arrows between zones */}
         {edgePairs.map((ep, ei) => {
-          const fromX = PAD_LEFT + ZONES.indexOf(ep.from) * (CELL_W + COL_GAP) + CELL_W;
-          const toX = PAD_LEFT + ZONES.indexOf(ep.to) * (CELL_W + COL_GAP);
-          const y = PAD_TOP + SEVERITIES.length * (CELL_H + GAP) + 10 + ei * 18;
+          const fromIdx = ZONES.indexOf(ep.from);
+          const toIdx = ZONES.indexOf(ep.to);
+          const fromX = PAD_LEFT + fromIdx * (CELL_W + COL_GAP) + CELL_W;
+          const toX = PAD_LEFT + toIdx * (CELL_W + COL_GAP);
+          const arrowY = PAD_TOP + SEVERITIES.length * (CELL_H + GAP) + 12 + ei * 20;
           const midX = (fromX + toX) / 2;
+          const color = SEV_COLORS[ep.sev] || "#6e7b8c";
+          const sw = Math.max(1.2, Math.min(5, Math.log2(ep.count + 1) * 1.3));
           return (
             <g key={`edge-${ep.from}-${ep.to}`}>
               <line
-                x1={fromX + 4}
-                y1={y}
-                x2={toX - 4}
-                y2={y}
-                stroke={SEV_COLORS[ep.sev] || "#6e7b8c"}
-                strokeWidth={Math.max(1, Math.min(6, Math.log2(ep.count + 1)))}
-                opacity={0.7}
+                x1={fromX + 6}
+                y1={arrowY}
+                x2={toX - 6}
+                y2={arrowY}
+                stroke={color}
+                strokeWidth={sw}
+                opacity={0.75}
+                strokeLinecap="round"
               />
               <polygon
-                points={`${toX - 4},${y - 3} ${toX},${y} ${toX - 4},${y + 3}`}
-                fill={SEV_COLORS[ep.sev] || "#6e7b8c"}
-                opacity={0.7}
-              />
-              <text x={midX} y={y - 4} textAnchor="middle" fill="#6e7b8c" fontSize={8}>
-                {ep.count} {L.events.titleCol.toLowerCase()}
+                points={`${toX - 6},${arrowY - 4} ${toX + 2},${arrowY} ${toX - 6},${arrowY + 4}`}
+                fill={color}
+                opacity={0.85}
+              >
+                <animateTransform
+                  attributeName="transform"
+                  type="translate"
+                  values={`${fromX + 6 - toX + 6},0; 0,0`}
+                  dur={`${2 + ep.count * 0.2}s`}
+                  repeatCount="indefinite"
+                />
+              </polygon>
+              <text x={midX} y={arrowY - 5} textAnchor="middle" fill="#6e7b8c" fontSize={7}>
+                {ep.count} tr\u00E1fico
               </text>
             </g>
           );
