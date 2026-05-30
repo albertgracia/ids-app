@@ -8,6 +8,8 @@
 - [ ] `.env` created with real secrets (not committed)
 - [ ] `docker compose config` validates
 - [ ] Images published or build context ready
+- [ ] GHCR workflow executed and 4 images visible in packages
+- [ ] Server can pull images (public packages or PAT configured)
 
 ## Deployment
 

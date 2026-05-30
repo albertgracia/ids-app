@@ -1,0 +1,56 @@
+# Publish staging container images to GitHub Container Registry (GHCR)
+# Trigger: manual via workflow_dispatch
+# Images: ids-core, ids-analytics, ids-mcp, ids-web
+# Tags: staging, <commit-sha>
+
+name: Publish staging container images
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: publish-staging-images-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service:
+          - name: ids-core
+            dockerfile: services/ids-core/Dockerfile
+          - name: ids-analytics
+            dockerfile: services/analytics-api/Dockerfile
+          - name: ids-mcp
+            dockerfile: services/mcp-server/Dockerfile
+          - name: ids-web
+            dockerfile: apps/web/Dockerfile
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push ${{ matrix.service.name }}
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ matrix.service.dockerfile }}
+          push: true
+          platforms: linux/amd64
+          tags: |
+            ghcr.io/${{ github.repository }}/${{ matrix.service.name }}:staging
+            ghcr.io/${{ github.repository }}/${{ matrix.service.name }}:${{ github.sha }}
