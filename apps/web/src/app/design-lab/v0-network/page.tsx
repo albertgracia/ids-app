@@ -26,7 +26,8 @@ import {
 } from "@/lib/v0-network/mock-data"
 import { useRealEvents } from "@/lib/v0-network/use-real-events"
 import { useAssetClassifications } from "@/lib/v0-network/use-asset-classifications"
-import { toV0PacketItems, buildV0Kpis, buildV0Connections } from "@/lib/v0-network/real-data-adapter"
+import { useEventScoring } from "@/lib/v0-network/use-event-scoring"
+import { toV0PacketItems, buildV0Kpis, buildV0Connections, buildV0SeverityMap } from "@/lib/v0-network/real-data-adapter"
 import type { DataSource } from "@/lib/v0-network/use-real-events"
 
 const TABS = [
@@ -61,6 +62,7 @@ export default function V0NetworkPage() {
 
   const realEvents = useRealEvents()
   const assetClassifications = useAssetClassifications()
+  const eventScoring = useEventScoring(realEvents.events)
   const [activeTab, setActiveTab] = useState<Tab>("live")
 
   const realPackets = useMemo(
@@ -81,7 +83,12 @@ export default function V0NetworkPage() {
   const displayPackets = replay.isReplayMode ? replay.replayPackets : (hasRealData ? realPackets : packets)
   const { alerts, dismissAlert, clearAllAlerts } = useThreatDetection(activePackets)
 
-  const connections = useMemo(() => buildV0Connections(activePackets), [activePackets])
+  const severityById = useMemo(
+    () => hasRealData ? buildV0SeverityMap(realEvents.events) : {},
+    [hasRealData, realEvents.events],
+  )
+
+  const connections = useMemo(() => buildV0Connections(activePackets, severityById), [activePackets, severityById])
 
   const sourceCfg = SOURCE_CONFIG[realEvents.source]
   const SourceIcon = sourceCfg.icon
@@ -132,6 +139,13 @@ export default function V0NetworkPage() {
               {assetClassifications.apiAvailable
                 ? `${assetClassifications.classifications.length} activos`
                 : "activos: N/A"}
+            </span>
+            <span
+              className="v0-source-count"
+              title="Severidad y scoring de eventos"
+              style={{ opacity: 0.55 }}
+            >
+              Scoring: {eventScoring.source === "analytics" ? "Analytics" : eventScoring.source === "derived" ? "Derivado" : "N/A"}
             </span>
             {realEvents.lastUpdated && (realEvents.source === "live" || realEvents.source === "polling") && (
               <span className="v0-source-time" title={`Última actualización: ${new Date(realEvents.lastUpdated).toLocaleTimeString("es-ES")}`}>
@@ -225,7 +239,11 @@ export default function V0NetworkPage() {
             {activeTab === "live" && (
               <div className="v0-space-16">
                 <PacketSearch value={searchQuery} onChange={setSearchQuery} />
-                <PacketStream packets={displayPackets} assetByIp={assetClassifications.byIp} />
+                <PacketStream
+                  packets={displayPackets}
+                  assetByIp={assetClassifications.byIp}
+                  severityById={severityById}
+                />
               </div>
             )}
 
@@ -235,7 +253,7 @@ export default function V0NetworkPage() {
                   classifications={assetClassifications.classifications}
                   apiAvailable={assetClassifications.apiAvailable}
                 />
-                <AdvancedStatsDashboard packets={activePackets} stats={realStats} />
+                <AdvancedStatsDashboard packets={activePackets} stats={realStats} severityById={severityById} />
                 <TrafficHeatmap packets={activePackets} />
                 <StatisticsChart packets={activePackets} />
               </div>

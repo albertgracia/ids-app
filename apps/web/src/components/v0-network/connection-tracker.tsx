@@ -2,12 +2,13 @@
 
 import { ProtocolBadge } from "./protocol-badge"
 import { AssetBadge } from "./asset-badge"
+import { SeverityBadge } from "./severity-badge"
 import { formatBytes } from "@/lib/v0-network/mock-data"
-import type { Connection } from "@/lib/v0-network/mock-data"
 import type { AssetInfo, AssetType } from "@/lib/v0-network/real-data-adapter"
+import type { EnrichedConnection } from "@/lib/v0-network/real-data-adapter"
 
 interface ConnectionTrackerProps {
-  connections: Connection[]
+  connections: EnrichedConnection[]
   assetByIp?: Record<string, AssetInfo>
 }
 
@@ -26,7 +27,8 @@ export function ConnectionTracker({ connections, assetByIp }: ConnectionTrackerP
         {connections.map((conn) => (
           <div key={conn.id} className="v0-conn-row">
             <div className="v0-conn-top">
-              <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+              <div style={{ display: "flex", gap: "4px", alignItems: "center", flexWrap: "wrap" }}>
+                <SeverityBadge severity={conn.severity} />
                 <ProtocolBadge protocol={conn.protocol} />
                 <span className="v0-conn-state">{conn.state}</span>
               </div>

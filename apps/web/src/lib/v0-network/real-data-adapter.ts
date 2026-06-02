@@ -139,6 +139,94 @@ export function buildV0AssetsByZone(classifications: AssetInfo[]): Record<string
   return zones
 }
 
+export type SeverityLevel = "critical" | "high" | "medium" | "low" | "info" | "unknown"
+
+export const SEVERITY_ORDER: SeverityLevel[] = ["critical", "high", "medium", "low", "info", "unknown"]
+
+export const SEVERITY_LABELS: Record<SeverityLevel, string> = {
+  critical: "Crítica",
+  high: "Alta",
+  medium: "Media",
+  low: "Baja",
+  info: "Info",
+  unknown: "Desconocida",
+}
+
+export const SEVERITY_COLORS: Record<SeverityLevel, string> = {
+  critical: "#ef4444",
+  high: "#f97316",
+  medium: "#eab308",
+  low: "#3b82f6",
+  info: "#9ca3af",
+  unknown: "#6b7280",
+}
+
+export const SEVERITY_WEIGHTS: Record<SeverityLevel, number> = {
+  critical: 5,
+  high: 4,
+  medium: 3,
+  low: 2,
+  info: 1,
+  unknown: 0,
+}
+
+export function normalizeSeverity(s: string): SeverityLevel {
+  const v = safeString(s).toLowerCase()
+  if (SEVERITY_ORDER.includes(v as SeverityLevel)) return v as SeverityLevel
+  return "unknown"
+}
+
+export function severityToLabelEs(s: SeverityLevel): string {
+  return SEVERITY_LABELS[s] || "Desconocida"
+}
+
+export function severityToColor(s: SeverityLevel): string {
+  return SEVERITY_COLORS[s] || "#6b7280"
+}
+
+export function severityToWeight(s: SeverityLevel): number {
+  return SEVERITY_WEIGHTS[s] ?? 0
+}
+
+export function isSuspiciousSeverity(s: SeverityLevel): boolean {
+  return s === "high" || s === "critical"
+}
+
+export function deriveEventRiskScore(severity: SeverityLevel): number {
+  return severityToWeight(severity) * 20
+}
+
+export function buildV0SeveritySummary(severityById: Record<string, SeverityLevel>): Record<SeverityLevel, number> {
+  const summary = {} as Record<SeverityLevel, number>
+  for (const s of SEVERITY_ORDER) summary[s] = 0
+  for (const sev of Object.values(severityById)) {
+    if (summary[sev] !== undefined) summary[sev]++
+  }
+  return summary
+}
+
+export function buildV0SeverityMap(events: EventItem[]): Record<string, SeverityLevel> {
+  const m: Record<string, SeverityLevel> = {}
+  for (const e of events) {
+    m[normalizeId(e.id)] = normalizeSeverity(e.severity)
+  }
+  return m
+}
+
+export function buildV0ConnSeverity(connPackets: PacketHeader[], severityById: Record<string, SeverityLevel>): SeverityLevel | undefined {
+  let maxW = -1
+  let maxS: SeverityLevel | undefined
+  for (const p of connPackets) {
+    const sev = severityById[p.id] || "unknown"
+    const w = severityToWeight(sev)
+    if (w > maxW) {
+      maxW = w
+      maxS = sev
+    }
+  }
+  return maxS
+}
+
 export function isPrivateIp(ip: string): boolean {
   return PRIVATE_PREFIXES.some((p) => ip.startsWith(p))
 }
@@ -262,7 +350,11 @@ export function buildV0TopPorts(packets: PacketHeader[]): Array<[number, number]
     .slice(0, MAX_PORTS)
 }
 
-export function buildV0Connections(packets: PacketHeader[]): Connection[] {
+export interface EnrichedConnection extends Connection {
+  severity: SeverityLevel
+}
+
+export function buildV0Connections(packets: PacketHeader[], severityById?: Record<string, SeverityLevel>): EnrichedConnection[] {
   const groups = new Map<string, { packets: PacketHeader[]; lastSeen: number; bytesIn: number }>()
   packets.forEach((p) => {
     const key = `${p.sourceIp}:${p.sourcePort}-${p.destIp}:${p.destPort}-${p.protocol}`
@@ -279,6 +371,15 @@ export function buildV0Connections(packets: PacketHeader[]): Connection[] {
     .map(([key, g]) => {
       const first = g.packets[0]
       const startTime = g.packets.reduce((min, p) => Math.min(min, p.timestamp), g.packets[0].timestamp)
+      let maxW = -1
+      let maxSev: SeverityLevel = "info"
+      if (severityById) {
+        for (const p of g.packets) {
+          const sev = severityById[p.id] || "unknown"
+          const w = severityToWeight(sev)
+          if (w > maxW) { maxW = w; maxSev = sev }
+        }
+      }
       return {
         id: key,
         sourceIp: first.sourceIp,
@@ -291,6 +392,7 @@ export function buildV0Connections(packets: PacketHeader[]): Connection[] {
         bytesSent: 0,
         startTime,
         lastActivity: g.lastSeen,
+        severity: maxSev,
       }
     })
 }

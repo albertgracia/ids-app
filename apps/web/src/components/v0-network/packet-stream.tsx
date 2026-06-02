@@ -3,21 +3,27 @@
 import { useState, useRef, useEffect } from "react"
 import { ProtocolBadge } from "./protocol-badge"
 import { AssetBadge } from "./asset-badge"
+import { SeverityBadge } from "./severity-badge"
 import { PacketDetailModal } from "./packet-detail-modal"
 import { formatTimestamp, formatBytes, type PacketHeader } from "@/lib/v0-network/mock-data"
-import type { AssetInfo, AssetType } from "@/lib/v0-network/real-data-adapter"
+import type { AssetInfo, AssetType, SeverityLevel } from "@/lib/v0-network/real-data-adapter"
 import { AlertTriangle, Maximize2, Minimize2 } from "lucide-react"
 
 interface PacketStreamProps {
   packets: PacketHeader[]
   maxHeight?: number
   assetByIp?: Record<string, AssetInfo>
+  severityById?: Record<string, SeverityLevel>
 }
 
-export function PacketStream({ packets, maxHeight = 600, assetByIp }: PacketStreamProps) {
+export function PacketStream({ packets, maxHeight = 600, assetByIp, severityById }: PacketStreamProps) {
 
   function getAssetType(ip: string): AssetType | undefined {
     return assetByIp?.[ip]?.assetType
+  }
+
+  function getSeverity(packet: PacketHeader): SeverityLevel {
+    return severityById?.[packet.id] || (packet.isSuspicious ? "high" : "info")
   }
   const [selectedPacket, setSelectedPacket] = useState<PacketHeader | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
@@ -68,8 +74,9 @@ export function PacketStream({ packets, maxHeight = 600, assetByIp }: PacketStre
                 onClick={() => handleClick(packet)}
               >
                 <div className="v0-packet-exp-header">
-                    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                      {packet.isSuspicious && <AlertTriangle size={14} color="#ef4444" />}
+                    <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                      <SeverityBadge severity={getSeverity(packet)} />
+                      {packet.isSuspicious && <AlertTriangle size={12} color="#ef4444" style={{ flexShrink: 0 }} />}
                       <span className="v0-mono-xs-dim">{formatTimestamp(packet.timestamp)}</span>
                       <ProtocolBadge protocol={packet.protocol} />
                       {(() => { const at = getAssetType(packet.destIp); return at ? <AssetBadge assetType={at} /> : null })()}
@@ -109,8 +116,9 @@ export function PacketStream({ packets, maxHeight = 600, assetByIp }: PacketStre
                 className={`v0-packet-row ${packet.isSuspicious ? "v0-packet-suspicious" : ""}`}
                 onClick={() => handleClick(packet)}
               >
-                  <div style={{ display: "flex", alignItems: "center", gap: "6px", flex: 1, minWidth: 0 }}>
-                    {packet.isSuspicious && <AlertTriangle size={14} color="#ef4444" style={{ flexShrink: 0 }} />}
+                  <div style={{ display: "flex", alignItems: "center", gap: "4px", flex: 1, minWidth: 0 }}>
+                    <SeverityBadge severity={getSeverity(packet)} />
+                    {packet.isSuspicious && <AlertTriangle size={12} color="#ef4444" style={{ flexShrink: 0 }} />}
                     <span className="v0-mono-xs-dim" style={{ whiteSpace: "nowrap" }}>{formatTimestamp(packet.timestamp)}</span>
                     <ProtocolBadge protocol={packet.protocol} />
                     {(() => { const at = getAssetType(packet.destIp); return at ? <AssetBadge assetType={at} /> : null })()}

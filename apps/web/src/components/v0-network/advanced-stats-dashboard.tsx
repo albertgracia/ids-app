@@ -9,15 +9,21 @@ import {
   buildV0TrafficMetrics,
   buildV0NetworkHealthScore,
   buildV0ProtocolDistribution,
+  buildV0SeveritySummary,
+  type SeverityLevel,
+  severityToColor,
+  severityToLabelEs,
+  SEVERITY_ORDER,
 } from "@/lib/v0-network/real-data-adapter"
-import { Shield, Globe, Cpu, HardDrive } from "lucide-react"
+import { Shield, Globe, Cpu, HardDrive, AlertTriangle } from "lucide-react"
 
 interface AdvancedStatsDashboardProps {
   packets: PacketHeader[]
   stats: TrafficStats
+  severityById?: Record<string, SeverityLevel>
 }
 
-export function AdvancedStatsDashboard({ packets, stats }: AdvancedStatsDashboardProps) {
+export function AdvancedStatsDashboard({ packets, stats, severityById }: AdvancedStatsDashboardProps) {
   const advancedMetrics = useMemo(() => {
     const trafficMetrics = buildV0TrafficMetrics(packets)
     const topSources = buildV0TopSources(packets)
@@ -35,8 +41,10 @@ export function AdvancedStatsDashboard({ packets, stats }: AdvancedStatsDashboar
       FTP: protoDist.FTP || 0,
     }
 
-    return { ...trafficMetrics, topSources, topPorts, protocolHealth, healthScore }
-  }, [packets, stats.suspiciousCount])
+    const severitySummary = severityById ? buildV0SeveritySummary(severityById) : null
+
+    return { ...trafficMetrics, topSources, topPorts, protocolHealth, healthScore, severitySummary }
+  }, [packets, stats.suspiciousCount, severityById])
 
   const getHealthColor = (score: number) => {
     if (score >= 80) return "#22c55e"
@@ -201,6 +209,36 @@ export function AdvancedStatsDashboard({ packets, stats }: AdvancedStatsDashboar
           </div>
         </div>
       </div>
+
+      {/* Severity Distribution */}
+      {advancedMetrics.severitySummary && (
+        <div className="v0-adv-card v0-adv-protocol-dist">
+          <div className="v0-adv-card-header">
+            <AlertTriangle size={16} color="#eab308" />
+            <span>Distribución por Severidad</span>
+          </div>
+          <div className="v0-adv-card-body">
+            <div className="v0-adv-protocol-list">
+              {SEVERITY_ORDER.filter((s) => s !== "unknown" && (advancedMetrics.severitySummary?.[s] ?? 0) > 0).map((severity) => {
+                const count = advancedMetrics.severitySummary?.[severity] ?? 0
+                const pct = (count / totalCount) * 100
+                const color = severityToColor(severity)
+                return (
+                  <div key={severity} className="v0-adv-protocol-row">
+                    <div className="v0-adv-protocol-header">
+                      <span className="v0-adv-protocol-name" style={{ color }}>{severityToLabelEs(severity)}</span>
+                      <span className="v0-adv-protocol-count">{count} ({pct.toFixed(1)}%)</span>
+                    </div>
+                    <div className="v0-progress-bar">
+                      <div className="v0-progress-fill" style={{ width: `${pct}%`, background: color }} />
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
