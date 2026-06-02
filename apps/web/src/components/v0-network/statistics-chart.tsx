@@ -17,7 +17,7 @@ export function StatisticsChart({ packets }: StatisticsChartProps) {
       const window = now - i * 1000
       const wp = packets.filter((p) => p.timestamp >= window && p.timestamp < window + 1000)
       data.push({
-        time: new Date(window).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false }),
+        time: new Date(window).toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false }),
         bytes: wp.reduce((s, p) => s + p.size, 0),
       })
     }

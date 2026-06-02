@@ -54,7 +54,7 @@ export function TrafficHeatmap({ packets }: TrafficHeatmapProps) {
         {heatmapData.map((hourData, hi) => (
           <div key={hi} style={{ display: "flex", gap: "2px", alignItems: "center", marginBottom: "2px" }}>
             <div style={{ width: "48px", textAlign: "right", fontSize: "10px", color: "rgba(255,255,255,0.4)", paddingRight: "4px" }}>
-              {new Date(Date.now() - (HOURS - 1 - hi) * 3600000).toLocaleTimeString("en-US", { hour: "2-digit", hour12: false })}
+              {new Date(Date.now() - (HOURS - 1 - hi) * 3600000).toLocaleTimeString("es-ES", { hour: "2-digit", hour12: false })}
             </div>
             {hourData.map((value, bi) => (
               <div

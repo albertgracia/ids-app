@@ -2,8 +2,8 @@
 
 import "./v0.css"
 
-import { useState, useEffect } from "react"
-import { Activity, Play, Pause, Trash2, Download, Film, X } from "lucide-react"
+import { useState, useEffect, useMemo } from "react"
+import { Activity, Play, Pause, Trash2, Download, Film, X, Database, Wifi, RefreshCw } from "lucide-react"
 import { StatsOverview } from "@/components/v0-network/stats-overview"
 import { PacketStream } from "@/components/v0-network/packet-stream"
 import { PacketSearch } from "@/components/v0-network/packet-search"
@@ -14,6 +14,8 @@ import { ThreatAlerts } from "@/components/v0-network/threat-alerts"
 import { StatisticsChart } from "@/components/v0-network/statistics-chart"
 import { TrafficHeatmap } from "@/components/v0-network/traffic-heatmap"
 import { TrafficMap } from "@/components/v0-network/traffic-map"
+import { AdvancedStatsDashboard } from "@/components/v0-network/advanced-stats-dashboard"
+import { LocationCards } from "@/components/v0-network/location-cards"
 import { ConnectionTracker } from "@/components/v0-network/connection-tracker"
 import {
   usePacketStream,
@@ -23,6 +25,8 @@ import {
   generateConnection,
   type Connection,
 } from "@/lib/v0-network/mock-data"
+import { useRealEvents } from "@/lib/v0-network/use-real-events"
+import { toV0PacketItems, buildV0Kpis } from "@/lib/v0-network/real-data-adapter"
 
 const TABS = [
   { key: "live", label: "Stream en Vivo" },
@@ -41,13 +45,27 @@ export default function V0NetworkPage() {
     togglePause, clearPackets,
   } = usePacketStream(300)
 
-  const stats = useTrafficStats(allPackets)
+  const realEvents = useRealEvents()
   const [connections, setConnections] = useState<Connection[]>([])
   const [activeTab, setActiveTab] = useState<Tab>("live")
 
-  const replay = usePacketReplay(allPackets)
-  const displayPackets = replay.isReplayMode ? replay.replayPackets : packets
-  const { alerts, dismissAlert, clearAllAlerts } = useThreatDetection(allPackets)
+  const realPackets = useMemo(
+    () => realEvents.apiAvailable ? toV0PacketItems(realEvents.events) : [],
+    [realEvents.events, realEvents.apiAvailable],
+  )
+
+  const hasRealData = realEvents.apiAvailable && realPackets.length > 0
+  const activePackets = hasRealData ? realPackets : allPackets
+
+  const stats = useTrafficStats(activePackets)
+  const realStats = useMemo(
+    () => hasRealData ? buildV0Kpis(realPackets) : stats,
+    [hasRealData, realPackets, stats],
+  )
+
+  const replay = usePacketReplay(activePackets)
+  const displayPackets = replay.isReplayMode ? replay.replayPackets : (hasRealData ? realPackets : packets)
+  const { alerts, dismissAlert, clearAllAlerts } = useThreatDetection(activePackets)
 
   // Generate mock connections
   useEffect(() => {
@@ -63,18 +81,8 @@ export default function V0NetworkPage() {
     return () => clearInterval(interval)
   }, [])
 
-  // Toast on new suspicious packets (console-based since no toast lib)
-  const toastsRef = useState<Array<{ id: string; text: string }>>([])[1]
-  useEffect(() => {
-    const suspicious = packets.filter((p) => p.isSuspicious)
-    if (suspicious.length > 0) {
-      const latest = suspicious[0]
-      console.log("[v0] Actividad sospechosa:", latest.protocol, latest.sourceIp)
-    }
-  }, [packets.length])
-
   const handleExport = () => {
-    const dataStr = JSON.stringify(allPackets, null, 2)
+    const dataStr = JSON.stringify(activePackets, null, 2)
     const blob = new Blob([dataStr], { type: "application/json" })
     const url = URL.createObjectURL(blob)
     const link = document.createElement("a")
@@ -82,10 +90,12 @@ export default function V0NetworkPage() {
     link.download = `captura-red-${Date.now()}.json`
     link.click()
     URL.revokeObjectURL(url)
-    console.log("[v0] Exportados", allPackets.length, "paquetes")
+    console.log("[v0] Exportados", activePackets.length, "paquetes")
   }
 
   const maxBandwidth = 100000
+
+  const sourceColor = hasRealData ? "#22c55e" : "#f97316"
 
   return (
     <div className="v0-network-shell">
@@ -100,6 +110,27 @@ export default function V0NetworkPage() {
             <p>Monitoreo y análisis de paquetes en tiempo real</p>
           </div>
           <div className="v0-header-actions">
+            <span
+              className="v0-source-badge"
+              style={{ borderColor: sourceColor, color: sourceColor }}
+            >
+              {hasRealData ? (
+                <>
+                  <Wifi size={12} /> Datos reales IDS
+                </>
+              ) : (
+                <>
+                  <Database size={12} /> Mock
+                </>
+              )}
+              <span className="v0-source-dot" style={{ background: sourceColor }} />
+            </span>
+            {realEvents.lastUpdated && hasRealData && (
+              <span className="v0-source-time" title={`Última actualización: ${new Date(realEvents.lastUpdated).toLocaleTimeString("es-ES")}`}>
+                <RefreshCw size={10} />{" "}
+                {Math.floor((Date.now() - realEvents.lastUpdated) / 1000)}s
+              </span>
+            )}
             {!replay.isReplayMode ? (
               <>
                 <button className="v0-btn-outline-sm" onClick={togglePause}>
@@ -112,7 +143,7 @@ export default function V0NetworkPage() {
                 <button
                   className="v0-btn-outline-sm"
                   onClick={replay.enterReplayMode}
-                  disabled={allPackets.length === 0}
+                  disabled={activePackets.length === 0}
                 >
                   <Film size={14} /> Reproducir
                 </button>
@@ -129,15 +160,15 @@ export default function V0NetworkPage() {
         </div>
 
         {/* KPI Cards */}
-        <StatsOverview stats={stats} />
+        <StatsOverview stats={realStats} />
 
         {/* Bandwidth + Filters Row */}
         <div className="v0-grid-4">
           <div style={{ display: "flex", justifyContent: "center" }}>
-            <BandwidthMeter label="Descarga" value={stats.bytesPerSecond} max={maxBandwidth} color="#3b82f6" />
+            <BandwidthMeter label="Descarga" value={realStats.bytesPerSecond} max={maxBandwidth} color="#3b82f6" />
           </div>
           <div style={{ display: "flex", justifyContent: "center" }}>
-            <BandwidthMeter label="Subida" value={stats.bytesPerSecond * 0.4} max={maxBandwidth} color="#22c55e" />
+            <BandwidthMeter label="Subida" value={realStats.bytesPerSecond * 0.4} max={maxBandwidth} color="#22c55e" />
           </div>
           <div style={{ gridColumn: "span 2" }}>
             <ProtocolFilters
@@ -153,7 +184,7 @@ export default function V0NetworkPage() {
           <ReplayControls
             isPlaying={replay.isPlaying}
             currentIndex={replay.currentIndex}
-            totalPackets={allPackets.length}
+            totalPackets={activePackets.length}
             playbackSpeed={replay.playbackSpeed}
             onPlay={replay.play}
             onPause={replay.pause}
@@ -192,8 +223,9 @@ export default function V0NetworkPage() {
 
             {activeTab === "stats" && (
               <div className="v0-space-16">
-                <TrafficHeatmap packets={allPackets} />
-                <StatisticsChart packets={allPackets} />
+                <AdvancedStatsDashboard packets={activePackets} stats={realStats} />
+                <TrafficHeatmap packets={activePackets} />
+                <StatisticsChart packets={activePackets} />
               </div>
             )}
 
@@ -202,7 +234,13 @@ export default function V0NetworkPage() {
             )}
 
             {activeTab === "map" && (
-              <TrafficMap packets={allPackets} />
+              <div className="v0-space-16">
+                <TrafficMap packets={activePackets} />
+                <LocationCards packets={activePackets} />
+                <div style={{ textAlign: "center", fontSize: "11px", color: "rgba(255,255,255,0.35)", padding: "4px 0" }}>
+                  GeoIP mock — fase futura: GeoIP real offline
+                </div>
+              </div>
             )}
           </div>
         </div>
