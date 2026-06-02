@@ -3,7 +3,7 @@
 import "./v0.css"
 
 import { useState, useEffect, useMemo } from "react"
-import { Activity, Play, Pause, Trash2, Download, Film, X, Database, Wifi, RefreshCw } from "lucide-react"
+import { Activity, Play, Pause, Trash2, Download, Film, X, Database, Wifi, RefreshCw, Radio } from "lucide-react"
 import { StatsOverview } from "@/components/v0-network/stats-overview"
 import { PacketStream } from "@/components/v0-network/packet-stream"
 import { PacketSearch } from "@/components/v0-network/packet-search"
@@ -27,6 +27,7 @@ import {
 } from "@/lib/v0-network/mock-data"
 import { useRealEvents } from "@/lib/v0-network/use-real-events"
 import { toV0PacketItems, buildV0Kpis } from "@/lib/v0-network/real-data-adapter"
+import type { DataSource } from "@/lib/v0-network/use-real-events"
 
 const TABS = [
   { key: "live", label: "Stream en Vivo" },
@@ -36,6 +37,19 @@ const TABS = [
 ] as const
 
 type Tab = (typeof TABS)[number]["key"]
+
+interface SourceConfig {
+  label: string
+  icon: typeof Wifi
+  color: string
+}
+
+const SOURCE_CONFIG: Record<DataSource, SourceConfig> = {
+  live: { label: "En Vivo", icon: Radio, color: "#22c55e" },
+  reconnecting: { label: "Reconectando", icon: Wifi, color: "#eab308" },
+  polling: { label: "Polling", icon: RefreshCw, color: "#3b82f6" },
+  mock: { label: "Mock", icon: Database, color: "#f97316" },
+}
 
 export default function V0NetworkPage() {
   const {
@@ -67,6 +81,9 @@ export default function V0NetworkPage() {
   const displayPackets = replay.isReplayMode ? replay.replayPackets : (hasRealData ? realPackets : packets)
   const { alerts, dismissAlert, clearAllAlerts } = useThreatDetection(activePackets)
 
+  const sourceCfg = SOURCE_CONFIG[realEvents.source]
+  const SourceIcon = sourceCfg.icon
+
   // Generate mock connections
   useEffect(() => {
     const interval = setInterval(() => {
@@ -95,8 +112,6 @@ export default function V0NetworkPage() {
 
   const maxBandwidth = 100000
 
-  const sourceColor = hasRealData ? "#22c55e" : "#f97316"
-
   return (
     <div className="v0-network-shell">
       <div style={{ maxWidth: "1280px", margin: "0 auto" }}>
@@ -112,20 +127,12 @@ export default function V0NetworkPage() {
           <div className="v0-header-actions">
             <span
               className="v0-source-badge"
-              style={{ borderColor: sourceColor, color: sourceColor }}
+              style={{ borderColor: sourceCfg.color, color: sourceCfg.color }}
             >
-              {hasRealData ? (
-                <>
-                  <Wifi size={12} /> Datos reales IDS
-                </>
-              ) : (
-                <>
-                  <Database size={12} /> Mock
-                </>
-              )}
-              <span className="v0-source-dot" style={{ background: sourceColor }} />
+              <SourceIcon size={12} /> {sourceCfg.label}
+              <span className="v0-source-dot" style={{ background: sourceCfg.color }} />
             </span>
-            {realEvents.lastUpdated && hasRealData && (
+            {realEvents.lastUpdated && (realEvents.source === "live" || realEvents.source === "polling") && (
               <span className="v0-source-time" title={`Última actualización: ${new Date(realEvents.lastUpdated).toLocaleTimeString("es-ES")}`}>
                 <RefreshCw size={10} />{" "}
                 {Math.floor((Date.now() - realEvents.lastUpdated) / 1000)}s
