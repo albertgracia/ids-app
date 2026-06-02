@@ -1,5 +1,5 @@
 import type { EventItem } from "@/lib/types"
-import type { Protocol, PacketHeader, TrafficStats, Connection } from "./mock-data"
+import type { Protocol, PacketHeader, TrafficStats, Connection, SuricataInfo } from "./mock-data"
 import { lookupSyntheticGeoIp, isExternalIp } from "./geoip-synthetic"
 
 export type AssetType = "plc" | "hmi" | "scada" | "engineering_workstation" | "it_server" | "external_host" | "ids_sensor" | "unknown"
@@ -214,6 +214,79 @@ export function buildV0SeverityMap(events: EventItem[]): Record<string, Severity
   return m
 }
 
+export function isSuricataEvent(event: EventItem): boolean {
+  return !!event.metadata?.["suricata.event_type"]
+}
+
+export function extractSuricataInfo(event: EventItem): SuricataInfo | null {
+  const meta = event.metadata
+  if (!meta?.["suricata.event_type"]) return null
+  return {
+    eventType: meta["suricata.event_type"],
+    signature: meta["alert.signature"] || "",
+    category: meta["alert.category"] || "",
+    appProto: meta["suricata.app_proto"] || "",
+  }
+}
+
+export function suricataEventTypeLabel(eventType: string): string {
+  const labels: Record<string, string> = {
+    alert: "ALERTA",
+    flow: "FLOW",
+    dns: "DNS",
+    http: "HTTP",
+    tls: "TLS",
+    dnp3: "DNP3",
+    modbus: "MODBUS",
+    s7comm: "S7",
+    ikev2: "IKEv2",
+    smb: "SMB",
+    ssh: "SSH",
+    krb5: "KRB5",
+    nfs: "NFS",
+    tftp: "TFTP",
+    dhcp: "DHCP",
+  }
+  return labels[eventType] || eventType.toUpperCase()
+}
+
+export const SURICATA_EVENT_TYPE_COLORS: Record<string, string> = {
+  alert: "#ef4444",
+  flow: "#3b82f6",
+  dns: "#f97316",
+  http: "#22c55e",
+  tls: "#a855f7",
+}
+
+export function suricataEventTypeColor(eventType: string): string {
+  return SURICATA_EVENT_TYPE_COLORS[eventType] || "#9ca3af"
+}
+
+export function buildV0SuricataSummary(suricataById: Record<string, SuricataInfo>): Record<string, number> {
+  const summary: Record<string, number> = {}
+  for (const info of Object.values(suricataById)) {
+    summary[info.eventType] = (summary[info.eventType] || 0) + 1
+  }
+  return summary
+}
+
+export function buildV0SuricataMap(events: EventItem[]): Record<string, SuricataInfo> {
+  const m: Record<string, SuricataInfo> = {}
+  for (const e of events) {
+    const info = extractSuricataInfo(e)
+    if (info) m[normalizeId(e.id)] = info
+  }
+  return m
+}
+
+export function buildV0SuricataFromPackets(packets: PacketHeader[]): Record<string, SuricataInfo> {
+  const m: Record<string, SuricataInfo> = {}
+  for (const p of packets) {
+    if (p.suricata) m[p.id] = p.suricata
+  }
+  return m
+}
+
 export function buildV0ExternalCount(packets: PacketHeader[]): number {
   return packets.filter((p) => p.geolocation && p.geolocation.lat !== 0 && p.geolocation.country !== "").length
 }
@@ -265,6 +338,7 @@ export function toV0PacketItem(event: EventItem): PacketHeader | null {
     const srcIp = safeString(event.source?.ip)
     const dstIp = safeString(event.destination?.ip)
     const geoIp = isExternalIp(srcIp) ? lookupSyntheticGeoIp(srcIp) : isExternalIp(dstIp) ? lookupSyntheticGeoIp(dstIp) : null
+    const suricataInfo = extractSuricataInfo(event)
     return {
       id: normalizeId(event.id),
       timestamp: safeTimestamp(event.timestamp),
@@ -280,6 +354,7 @@ export function toV0PacketItem(event: EventItem): PacketHeader | null {
       geolocation: geoIp ? { lat: geoIp.latitude, lng: geoIp.longitude, country: geoIp.countryName } : { lat: 0, lng: 0, country: "" },
       country: geoIp?.countryName || "",
       city: geoIp?.city || "",
+      ...(suricataInfo ? { suricata: suricataInfo } : {}),
     }
   } catch {
     return null

@@ -18,6 +18,7 @@ import { AdvancedStatsDashboard } from "@/components/v0-network/advanced-stats-d
 import { LocationCards } from "@/components/v0-network/location-cards"
 import { ConnectionTracker } from "@/components/v0-network/connection-tracker"
 import { AssetSummaryBlock } from "@/components/v0-network/asset-summary"
+import { SuricataSummary } from "@/components/v0-network/suricata-summary"
 import {
   usePacketStream,
   useTrafficStats,
@@ -27,7 +28,7 @@ import {
 import { useRealEvents } from "@/lib/v0-network/use-real-events"
 import { useAssetClassifications } from "@/lib/v0-network/use-asset-classifications"
 import { useEventScoring } from "@/lib/v0-network/use-event-scoring"
-import { toV0PacketItems, buildV0Kpis, buildV0Connections, buildV0SeverityMap, buildV0ExternalCount, buildV0MapSourceLabel } from "@/lib/v0-network/real-data-adapter"
+import { toV0PacketItems, buildV0Kpis, buildV0Connections, buildV0SeverityMap, buildV0SuricataMap, buildV0SuricataFromPackets, buildV0ExternalCount, buildV0MapSourceLabel } from "@/lib/v0-network/real-data-adapter"
 import type { DataSource } from "@/lib/v0-network/use-real-events"
 
 const TABS = [
@@ -88,6 +89,11 @@ export default function V0NetworkPage() {
     [hasRealData, realEvents.events],
   )
 
+  const suricataById = useMemo(
+    () => hasRealData ? buildV0SuricataMap(realEvents.events) : buildV0SuricataFromPackets(allPackets),
+    [hasRealData, realEvents.events, allPackets],
+  )
+
   const connections = useMemo(() => buildV0Connections(activePackets, severityById), [activePackets, severityById])
 
   const sourceCfg = SOURCE_CONFIG[realEvents.source]
@@ -146,6 +152,13 @@ export default function V0NetworkPage() {
               style={{ opacity: 0.55 }}
             >
               Scoring: {eventScoring.source === "analytics" ? "Analytics" : eventScoring.source === "derived" ? "Derivado" : "N/A"}
+            </span>
+            <span
+              className="v0-source-count"
+              title="Eventos Suricata EVE detectados"
+              style={{ opacity: Object.keys(suricataById).length > 0 ? 0.7 : 0.4 }}
+            >
+              EVE: {Object.keys(suricataById).length}
             </span>
             {realEvents.lastUpdated && (realEvents.source === "live" || realEvents.source === "polling") && (
               <span className="v0-source-time" title={`Última actualización: ${new Date(realEvents.lastUpdated).toLocaleTimeString("es-ES")}`}>
@@ -249,6 +262,7 @@ export default function V0NetworkPage() {
 
             {activeTab === "stats" && (
               <div className="v0-space-16">
+                <SuricataSummary suricataById={suricataById} />
                 <AssetSummaryBlock
                   classifications={assetClassifications.classifications}
                   apiAvailable={assetClassifications.apiAvailable}

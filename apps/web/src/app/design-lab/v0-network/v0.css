@@ -1267,6 +1267,25 @@
   flex-shrink: 0;
 }
 
+/* ===== Suricata Badge ===== */
+.v0-suricata-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 10px;
+  font-family: monospace;
+  font-weight: 600;
+  padding: 0 5px;
+  line-height: 18px;
+  border-radius: 3px;
+  border: 1px solid;
+  white-space: nowrap;
+}
+
+/* ===== Suricata Summary ===== */
+.suricata-summary {
+  margin-bottom: 12px;
+}
+
 /* ===== Animation ===== */
 @keyframes v0-pulse {
   0%, 100% { opacity: 0.3; }

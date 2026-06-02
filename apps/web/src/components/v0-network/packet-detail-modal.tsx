@@ -76,6 +76,18 @@ export function PacketDetailModal({ packet, open, onOpenChange }: PacketDetailMo
               </div>
             </div>
           )}
+
+          {packet.suricata && (
+            <div className="v0-detail-section">
+              <h3>Suricata EVE</h3>
+              <div className="v0-detail-grid">
+                <div><span className="v0-detail-label">Tipo</span><span style={{ fontFamily: "monospace" }}>{packet.suricata.eventType}</span></div>
+                {packet.suricata.signature && <div style={{ gridColumn: "1 / -1" }}><span className="v0-detail-label">Firma</span><span style={{ fontFamily: "monospace", fontSize: "12px", color: "rgba(255,255,255,0.8)" }}>{packet.suricata.signature}</span></div>}
+                {packet.suricata.category && <div><span className="v0-detail-label">Categoría</span><span style={{ fontFamily: "monospace" }}>{packet.suricata.category}</span></div>}
+                {packet.suricata.appProto && <div><span className="v0-detail-label">App Proto</span><span style={{ fontFamily: "monospace" }}>{packet.suricata.appProto}</span></div>}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

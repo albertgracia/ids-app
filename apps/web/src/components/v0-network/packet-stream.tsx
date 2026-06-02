@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react"
 import { ProtocolBadge } from "./protocol-badge"
 import { AssetBadge } from "./asset-badge"
 import { SeverityBadge } from "./severity-badge"
+import { SuricataBadge } from "./suricata-badge"
 import { PacketDetailModal } from "./packet-detail-modal"
 import { formatTimestamp, formatBytes, type PacketHeader } from "@/lib/v0-network/mock-data"
 import type { AssetInfo, AssetType, SeverityLevel } from "@/lib/v0-network/real-data-adapter"
@@ -80,6 +81,7 @@ export function PacketStream({ packets, maxHeight = 600, assetByIp, severityById
                       <span className="v0-mono-xs-dim">{formatTimestamp(packet.timestamp)}</span>
                       <ProtocolBadge protocol={packet.protocol} />
                       {(() => { const at = getAssetType(packet.destIp); return at ? <AssetBadge assetType={at} /> : null })()}
+                      {packet.suricata && <SuricataBadge eventType={packet.suricata.eventType} />}
                     </div>
                   <span className="v0-mono-xs-dim">{formatBytes(packet.size)}</span>
                 </div>
@@ -102,6 +104,15 @@ export function PacketStream({ packets, maxHeight = 600, assetByIp, severityById
                     </div>
                   </div>
                 </div>
+                {packet.suricata && packet.suricata.signature && (
+                  <div style={{ marginTop: "6px", fontSize: "11px", fontFamily: "monospace", color: "rgba(255,255,255,0.7)" }}>
+                    <span style={{ color: "#a855f7" }}>EVE:</span>{" "}
+                    {packet.suricata.signature.length > 80
+                      ? packet.suricata.signature.slice(0, 80) + "…"
+                      : packet.suricata.signature}
+                    {packet.suricata.category && <span style={{ color: "rgba(255,255,255,0.4)" }}> [{packet.suricata.category}]</span>}
+                  </div>
+                )}
                 {packet.flags.length > 0 && (
                   <div style={{ display: "flex", gap: "4px", marginTop: "6px", flexWrap: "wrap" }}>
                     {packet.flags.map((flag) => (
@@ -122,6 +133,7 @@ export function PacketStream({ packets, maxHeight = 600, assetByIp, severityById
                     <span className="v0-mono-xs-dim" style={{ whiteSpace: "nowrap" }}>{formatTimestamp(packet.timestamp)}</span>
                     <ProtocolBadge protocol={packet.protocol} />
                     {(() => { const at = getAssetType(packet.destIp); return at ? <AssetBadge assetType={at} /> : null })()}
+                    {packet.suricata && <SuricataBadge eventType={packet.suricata.eventType} />}
                   <div style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "12px", fontFamily: "monospace", overflow: "hidden" }}>
                     <span style={{ color: "#06b6d4" }}>{packet.sourceIp}</span>
                     <span style={{ color: "rgba(255,255,255,0.4)" }}>:</span>
@@ -133,6 +145,13 @@ export function PacketStream({ packets, maxHeight = 600, assetByIp, severityById
                   </div>
                 </div>
                 <span className="v0-mono-xs-dim" style={{ whiteSpace: "nowrap" }}>{packet.size} bytes</span>
+                {packet.suricata && packet.suricata.signature && (
+                  <span className="v0-mono-xs-dim" style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "200px", color: "rgba(255,255,255,0.4)" }}>
+                    {packet.suricata.signature.length > 40
+                      ? packet.suricata.signature.slice(0, 40) + "…"
+                      : packet.suricata.signature}
+                  </span>
+                )}
               </div>
             )
           ))}

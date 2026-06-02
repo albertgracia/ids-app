@@ -18,6 +18,13 @@ export interface Geolocation {
   country: string
 }
 
+export interface SuricataInfo {
+  eventType: string
+  signature: string
+  category: string
+  appProto: string
+}
+
 export interface PacketHeader {
   id: string
   timestamp: number
@@ -33,6 +40,7 @@ export interface PacketHeader {
   geolocation: Geolocation
   country: string
   city: string
+  suricata?: SuricataInfo
 }
 
 export interface Connection {
@@ -205,6 +213,28 @@ export function generatePacket(): PacketHeader {
   const city = randomItem(CITIES)
   const geolocation = CITY_COORDS[city]
 
+  const SURICATA_EVENT_TYPES = ["flow", "dns", "http", "tls", "alert", "ssh"]
+  const SURICATA_CATEGORIES = [
+    "Unknown", "Attempted Information Leak", "Misc activity",
+    "Potentially Bad Traffic", "Not Suspicious Traffic",
+    "Attempted Denial of Service",
+  ]
+  const SURICATA_SIGNATURES = [
+    "ET INFO Inbound SNMP Request",
+    "ET POLICY DNS Query for .onion Domain",
+    "ET POLICY HTTP Request to Suspicious Domain",
+    "ET MALWARE Possible Malicious SSL Certificate",
+    "ET SCAN Potential SSH Scan",
+  ]
+  const suricata = Math.random() < 0.15
+    ? {
+        eventType: randomItem(SURICATA_EVENT_TYPES),
+        signature: randomItem(SURICATA_SIGNATURES),
+        category: randomItem(SURICATA_CATEGORIES),
+        appProto: Math.random() < 0.5 ? randomItem(["tls", "http", "ssh"]) : "",
+      }
+    : undefined
+
   return {
     id: Math.random().toString(36).substring(2, 11),
     timestamp: Date.now(),
@@ -219,6 +249,7 @@ export function generatePacket(): PacketHeader {
     geolocation,
     country: geolocation.country,
     city,
+    suricata,
   }
 }
 
