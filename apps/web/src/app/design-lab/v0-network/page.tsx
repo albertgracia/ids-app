@@ -27,7 +27,7 @@ import {
 import { useRealEvents } from "@/lib/v0-network/use-real-events"
 import { useAssetClassifications } from "@/lib/v0-network/use-asset-classifications"
 import { useEventScoring } from "@/lib/v0-network/use-event-scoring"
-import { toV0PacketItems, buildV0Kpis, buildV0Connections, buildV0SeverityMap } from "@/lib/v0-network/real-data-adapter"
+import { toV0PacketItems, buildV0Kpis, buildV0Connections, buildV0SeverityMap, buildV0ExternalCount, buildV0MapSourceLabel } from "@/lib/v0-network/real-data-adapter"
 import type { DataSource } from "@/lib/v0-network/use-real-events"
 
 const TABS = [
@@ -273,8 +273,12 @@ export default function V0NetworkPage() {
               <div className="v0-space-16">
                 <TrafficMap packets={activePackets} />
                 <LocationCards packets={activePackets} />
-                <div style={{ textAlign: "center", fontSize: "11px", color: "rgba(255,255,255,0.35)", padding: "4px 0" }}>
-                  GeoIP mock — fase futura: GeoIP real offline
+                <div style={{
+                  textAlign: "center", fontSize: "10px", color: "rgba(255,255,255,0.3)",
+                  padding: "6px 0", fontFamily: "monospace", lineHeight: 1.6,
+                }}>
+                  <div>GeoIP sintético local — no se consulta ningún proveedor externo</div>
+                  <div>No se geolocalizan IPs privadas · Fuente: {buildV0MapSourceLabel(activePackets, hasRealData)} · {buildV0ExternalCount(activePackets)} IPs externas</div>
                 </div>
               </div>
             )}

@@ -1,5 +1,6 @@
 import type { EventItem } from "@/lib/types"
 import type { Protocol, PacketHeader, TrafficStats, Connection } from "./mock-data"
+import { lookupSyntheticGeoIp, isExternalIp } from "./geoip-synthetic"
 
 export type AssetType = "plc" | "hmi" | "scada" | "engineering_workstation" | "it_server" | "external_host" | "ids_sensor" | "unknown"
 
@@ -213,6 +214,17 @@ export function buildV0SeverityMap(events: EventItem[]): Record<string, Severity
   return m
 }
 
+export function buildV0ExternalCount(packets: PacketHeader[]): number {
+  return packets.filter((p) => p.geolocation && p.geolocation.lat !== 0 && p.geolocation.country !== "").length
+}
+
+export function buildV0MapSourceLabel(packets: PacketHeader[], hasRealData: boolean): string {
+  const extCount = buildV0ExternalCount(packets)
+  if (!hasRealData) return "Mock"
+  if (extCount === 0) return "Sin IPs externas"
+  return "GeoIP sintético"
+}
+
 export function buildV0ConnSeverity(connPackets: PacketHeader[], severityById: Record<string, SeverityLevel>): SeverityLevel | undefined {
   let maxW = -1
   let maxS: SeverityLevel | undefined
@@ -252,6 +264,7 @@ export function toV0PacketItem(event: EventItem): PacketHeader | null {
     const protocol = mapProtocol(event.protocol)
     const srcIp = safeString(event.source?.ip)
     const dstIp = safeString(event.destination?.ip)
+    const geoIp = isExternalIp(srcIp) ? lookupSyntheticGeoIp(srcIp) : isExternalIp(dstIp) ? lookupSyntheticGeoIp(dstIp) : null
     return {
       id: normalizeId(event.id),
       timestamp: safeTimestamp(event.timestamp),
@@ -264,9 +277,9 @@ export function toV0PacketItem(event: EventItem): PacketHeader | null {
       flags: [],
       ttl: 64,
       isSuspicious: mapSeverity(event.severity),
-      geolocation: { lat: 0, lng: 0, country: "" },
-      country: "",
-      city: "",
+      geolocation: geoIp ? { lat: geoIp.latitude, lng: geoIp.longitude, country: geoIp.countryName } : { lat: 0, lng: 0, country: "" },
+      country: geoIp?.countryName || "",
+      city: geoIp?.city || "",
     }
   } catch {
     return null
