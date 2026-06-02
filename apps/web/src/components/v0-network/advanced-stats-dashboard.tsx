@@ -3,6 +3,13 @@
 import { useMemo } from "react"
 import type { PacketHeader, TrafficStats } from "@/lib/v0-network/mock-data"
 import { formatBytes } from "@/lib/v0-network/mock-data"
+import {
+  buildV0TopSources,
+  buildV0TopPorts,
+  buildV0TrafficMetrics,
+  buildV0NetworkHealthScore,
+  buildV0ProtocolDistribution,
+} from "@/lib/v0-network/real-data-adapter"
 import { Shield, Globe, Cpu, HardDrive } from "lucide-react"
 
 interface AdvancedStatsDashboardProps {
@@ -12,34 +19,24 @@ interface AdvancedStatsDashboardProps {
 
 export function AdvancedStatsDashboard({ packets, stats }: AdvancedStatsDashboardProps) {
   const advancedMetrics = useMemo(() => {
-    const uniqueSourceIps = new Set(packets.map((p) => p.sourceIp)).size
-    const uniqueDestIps = new Set(packets.map((p) => p.destIp)).size
-    const uniquePorts = new Set(packets.map((p) => p.destPort)).size
-
-    const topSources = Object.entries(
-      packets.reduce((acc, p) => { acc[p.sourceIp] = (acc[p.sourceIp] || 0) + 1; return acc }, {} as Record<string, number>),
-    ).sort(([, a], [, b]) => b - a).slice(0, 5)
-
-    const topPorts = Object.entries(
-      packets.reduce((acc, p) => { acc[p.destPort] = (acc[p.destPort] || 0) + 1; return acc }, {} as Record<number, number>),
-    ).sort(([, a], [, b]) => b - a).slice(0, 5)
-
-    const avgPacketSize = packets.length > 0 ? stats.totalBytes / packets.length : 0
+    const trafficMetrics = buildV0TrafficMetrics(packets)
+    const topSources = buildV0TopSources(packets)
+    const topPorts = buildV0TopPorts(packets)
+    const protoDist = buildV0ProtocolDistribution(packets)
+    const healthScore = buildV0NetworkHealthScore(packets, stats.suspiciousCount)
 
     const protocolHealth = {
-      TCP: packets.filter((p) => p.protocol === "TCP").length,
-      UDP: packets.filter((p) => p.protocol === "UDP").length,
-      HTTP: packets.filter((p) => p.protocol === "HTTP" || p.protocol === "HTTPS").length,
-      DNS: packets.filter((p) => p.protocol === "DNS").length,
-      ICMP: packets.filter((p) => p.protocol === "ICMP").length,
-      SSH: packets.filter((p) => p.protocol === "SSH").length,
-      FTP: packets.filter((p) => p.protocol === "FTP").length,
+      TCP: protoDist.TCP || 0,
+      UDP: protoDist.UDP || 0,
+      HTTP: (protoDist.HTTP || 0) + (protoDist.HTTPS || 0),
+      DNS: protoDist.DNS || 0,
+      ICMP: protoDist.ICMP || 0,
+      SSH: protoDist.SSH || 0,
+      FTP: protoDist.FTP || 0,
     }
 
-    const healthScore = Math.max(0, 100 - stats.suspiciousCount * 2 - (uniqueSourceIps > 50 ? 10 : 0))
-
-    return { uniqueSourceIps, uniqueDestIps, uniquePorts, topSources, topPorts, avgPacketSize, protocolHealth, healthScore }
-  }, [packets, stats])
+    return { ...trafficMetrics, topSources, topPorts, protocolHealth, healthScore }
+  }, [packets, stats.suspiciousCount])
 
   const getHealthColor = (score: number) => {
     if (score >= 80) return "#22c55e"

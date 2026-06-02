@@ -116,6 +116,27 @@ export function buildV0Kpis(packets: PacketHeader[], windowSeconds = 5): Traffic
   }
 }
 
+export interface TrafficMetrics {
+  uniqueSourceIps: number
+  uniqueDestIps: number
+  uniquePorts: number
+  avgPacketSize: number
+}
+
+export function buildV0TrafficMetrics(packets: PacketHeader[]): TrafficMetrics {
+  const uniqueSourceIps = new Set(packets.map((p) => p.sourceIp)).size
+  const uniqueDestIps = new Set(packets.map((p) => p.destIp)).size
+  const uniquePorts = new Set(packets.map((p) => p.destPort)).size
+  const totalBytes = packets.reduce((s, p) => s + p.size, 0)
+  const avgPacketSize = packets.length > 0 ? totalBytes / packets.length : 0
+  return { uniqueSourceIps, uniqueDestIps, uniquePorts, avgPacketSize }
+}
+
+export function buildV0NetworkHealthScore(packets: PacketHeader[], suspiciousCount: number): number {
+  const uniqueSourceIps = new Set(packets.map((p) => p.sourceIp)).size
+  return Math.max(0, 100 - suspiciousCount * 2 - (uniqueSourceIps > 50 ? 10 : 0))
+}
+
 export function buildV0ProtocolDistribution(packets: PacketHeader[]): Record<Protocol, number> {
   const dist = {} as Record<Protocol, number>
   packets.forEach((p) => {

@@ -916,7 +916,8 @@
   animation: v0-pulse 2s infinite;
 }
 
-.v0-source-time {
+.v0-source-time,
+.v0-source-count {
   display: inline-flex;
   align-items: center;
   gap: 4px;
@@ -924,6 +925,11 @@
   font-family: monospace;
   color: var(--v0-text-dim);
   white-space: nowrap;
+}
+
+.v0-source-count {
+  color: var(--v0-text-dim);
+  opacity: 0.7;
 }
 
 /* ===== Advanced Stats Dashboard ===== */

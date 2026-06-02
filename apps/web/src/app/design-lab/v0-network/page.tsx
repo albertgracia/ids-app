@@ -2,7 +2,7 @@
 
 import "./v0.css"
 
-import { useState, useEffect, useMemo } from "react"
+import { useState, useMemo } from "react"
 import { Activity, Play, Pause, Trash2, Download, Film, X, Database, Wifi, RefreshCw, Radio } from "lucide-react"
 import { StatsOverview } from "@/components/v0-network/stats-overview"
 import { PacketStream } from "@/components/v0-network/packet-stream"
@@ -22,11 +22,9 @@ import {
   useTrafficStats,
   usePacketReplay,
   useThreatDetection,
-  generateConnection,
-  type Connection,
 } from "@/lib/v0-network/mock-data"
 import { useRealEvents } from "@/lib/v0-network/use-real-events"
-import { toV0PacketItems, buildV0Kpis } from "@/lib/v0-network/real-data-adapter"
+import { toV0PacketItems, buildV0Kpis, buildV0Connections } from "@/lib/v0-network/real-data-adapter"
 import type { DataSource } from "@/lib/v0-network/use-real-events"
 
 const TABS = [
@@ -60,7 +58,6 @@ export default function V0NetworkPage() {
   } = usePacketStream(300)
 
   const realEvents = useRealEvents()
-  const [connections, setConnections] = useState<Connection[]>([])
   const [activeTab, setActiveTab] = useState<Tab>("live")
 
   const realPackets = useMemo(
@@ -81,22 +78,10 @@ export default function V0NetworkPage() {
   const displayPackets = replay.isReplayMode ? replay.replayPackets : (hasRealData ? realPackets : packets)
   const { alerts, dismissAlert, clearAllAlerts } = useThreatDetection(activePackets)
 
+  const connections = useMemo(() => buildV0Connections(activePackets), [activePackets])
+
   const sourceCfg = SOURCE_CONFIG[realEvents.source]
   const SourceIcon = sourceCfg.icon
-
-  // Generate mock connections
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setConnections((prev) => {
-        const updated = [...prev]
-        if (Math.random() > 0.7 && updated.length < 15) {
-          updated.push(generateConnection())
-        }
-        return updated.filter((c) => Date.now() - c.lastActivity < 60000)
-      })
-    }, 2000)
-    return () => clearInterval(interval)
-  }, [])
 
   const handleExport = () => {
     const dataStr = JSON.stringify(activePackets, null, 2)
@@ -131,6 +116,9 @@ export default function V0NetworkPage() {
             >
               <SourceIcon size={12} /> {sourceCfg.label}
               <span className="v0-source-dot" style={{ background: sourceCfg.color }} />
+            </span>
+            <span className="v0-source-count" title={`${activePackets.length} eventos activos`}>
+              <Activity size={10} /> {activePackets.length}
             </span>
             {realEvents.lastUpdated && (realEvents.source === "live" || realEvents.source === "polling") && (
               <span className="v0-source-time" title={`Última actualización: ${new Date(realEvents.lastUpdated).toLocaleTimeString("es-ES")}`}>
