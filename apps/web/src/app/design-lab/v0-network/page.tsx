@@ -3,7 +3,7 @@
 import "./v0.css"
 
 import { useState, useMemo } from "react"
-import { Activity, Play, Pause, Trash2, Download, Film, X, Database, Wifi, RefreshCw, Radio } from "lucide-react"
+import { Activity, Play, Pause, Trash2, Download, Film, X, Database, Wifi, RefreshCw, Radio, Shield } from "lucide-react"
 import { StatsOverview } from "@/components/v0-network/stats-overview"
 import { PacketStream } from "@/components/v0-network/packet-stream"
 import { PacketSearch } from "@/components/v0-network/packet-search"
@@ -17,6 +17,7 @@ import { TrafficMap } from "@/components/v0-network/traffic-map"
 import { AdvancedStatsDashboard } from "@/components/v0-network/advanced-stats-dashboard"
 import { LocationCards } from "@/components/v0-network/location-cards"
 import { ConnectionTracker } from "@/components/v0-network/connection-tracker"
+import { AssetSummaryBlock } from "@/components/v0-network/asset-summary"
 import {
   usePacketStream,
   useTrafficStats,
@@ -24,6 +25,7 @@ import {
   useThreatDetection,
 } from "@/lib/v0-network/mock-data"
 import { useRealEvents } from "@/lib/v0-network/use-real-events"
+import { useAssetClassifications } from "@/lib/v0-network/use-asset-classifications"
 import { toV0PacketItems, buildV0Kpis, buildV0Connections } from "@/lib/v0-network/real-data-adapter"
 import type { DataSource } from "@/lib/v0-network/use-real-events"
 
@@ -58,6 +60,7 @@ export default function V0NetworkPage() {
   } = usePacketStream(300)
 
   const realEvents = useRealEvents()
+  const assetClassifications = useAssetClassifications()
   const [activeTab, setActiveTab] = useState<Tab>("live")
 
   const realPackets = useMemo(
@@ -119,6 +122,16 @@ export default function V0NetworkPage() {
             </span>
             <span className="v0-source-count" title={`${activePackets.length} eventos activos`}>
               <Activity size={10} /> {activePackets.length}
+            </span>
+            <span
+              className="v0-source-count"
+              title={`${assetClassifications.classifications.length} activos clasificados`}
+              style={{ opacity: assetClassifications.apiAvailable ? 0.7 : 0.4 }}
+            >
+              <Shield size={10} />{" "}
+              {assetClassifications.apiAvailable
+                ? `${assetClassifications.classifications.length} activos`
+                : "activos: N/A"}
             </span>
             {realEvents.lastUpdated && (realEvents.source === "live" || realEvents.source === "polling") && (
               <span className="v0-source-time" title={`Última actualización: ${new Date(realEvents.lastUpdated).toLocaleTimeString("es-ES")}`}>
@@ -212,12 +225,16 @@ export default function V0NetworkPage() {
             {activeTab === "live" && (
               <div className="v0-space-16">
                 <PacketSearch value={searchQuery} onChange={setSearchQuery} />
-                <PacketStream packets={displayPackets} />
+                <PacketStream packets={displayPackets} assetByIp={assetClassifications.byIp} />
               </div>
             )}
 
             {activeTab === "stats" && (
               <div className="v0-space-16">
+                <AssetSummaryBlock
+                  classifications={assetClassifications.classifications}
+                  apiAvailable={assetClassifications.apiAvailable}
+                />
                 <AdvancedStatsDashboard packets={activePackets} stats={realStats} />
                 <TrafficHeatmap packets={activePackets} />
                 <StatisticsChart packets={activePackets} />
@@ -225,7 +242,13 @@ export default function V0NetworkPage() {
             )}
 
             {activeTab === "connections" && (
-              <ConnectionTracker connections={connections} />
+              <div className="v0-space-16">
+                <AssetSummaryBlock
+                  classifications={assetClassifications.classifications}
+                  apiAvailable={assetClassifications.apiAvailable}
+                />
+                <ConnectionTracker connections={connections} assetByIp={assetClassifications.byIp} />
+              </div>
             )}
 
             {activeTab === "map" && (

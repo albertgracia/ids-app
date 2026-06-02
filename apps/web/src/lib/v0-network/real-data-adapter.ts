@@ -1,6 +1,54 @@
 import type { EventItem } from "@/lib/types"
 import type { Protocol, PacketHeader, TrafficStats, Connection } from "./mock-data"
 
+export type AssetType = "plc" | "hmi" | "scada" | "engineering_workstation" | "it_server" | "external_host" | "ids_sensor" | "unknown"
+
+export const ASSET_TYPES: AssetType[] = ["plc", "hmi", "scada", "engineering_workstation", "it_server", "external_host", "ids_sensor", "unknown"]
+
+export interface AssetInfo {
+  ip: string
+  assetType: AssetType
+  confidence: number
+  zone: string
+  criticality: string
+  protocols: string[]
+  eventCount: number
+  reasons: string[]
+}
+
+export const ASSET_TYPE_LABELS: Record<AssetType, string> = {
+  plc: "PLC",
+  hmi: "HMI",
+  scada: "SCADA",
+  engineering_workstation: "EWS",
+  it_server: "IT",
+  external_host: "EXT",
+  ids_sensor: "IDS",
+  unknown: "?",
+}
+
+export const ASSET_TYPE_COLORS: Record<AssetType, string> = {
+  plc: "#f97316",
+  hmi: "#a855f7",
+  scada: "#ec4899",
+  engineering_workstation: "#06b6d4",
+  it_server: "#3b82f6",
+  external_host: "#22c55e",
+  ids_sensor: "#eab308",
+  unknown: "#9ca3af",
+}
+
+export const ASSET_TYPE_ZONES: Record<AssetType, string> = {
+  plc: "ot",
+  hmi: "ot",
+  scada: "ot",
+  engineering_workstation: "ot",
+  it_server: "it",
+  external_host: "external",
+  ids_sensor: "it",
+  unknown: "unknown",
+}
+
 const MAX_EVENTS = 500
 const MAX_STREAM = 100
 const MAX_SOURCES = 5
@@ -40,6 +88,55 @@ export function safeTimestamp(v: unknown): number {
 export function truncateLabel(label: string, max = MAX_LABEL_LENGTH): string {
   if (typeof label !== "string") return ""
   return label.length > max ? label.slice(0, max) + "…" : label
+}
+
+export function toAssetInfo(raw: Record<string, unknown>): AssetInfo | null {
+  try {
+    const at = (raw.asset_type as string) || "unknown"
+    if (!ASSET_TYPES.includes(at as AssetType)) return null
+    return {
+      ip: safeString(raw.ip),
+      assetType: at as AssetType,
+      confidence: Math.max(0, Math.min(100, safeNumber(raw.confidence))),
+      zone: safeString(raw.zone, "unknown"),
+      criticality: safeString(raw.criticality, "low"),
+      protocols: Array.isArray(raw.protocols) ? (raw.protocols as string[]).map((p) => safeString(p)).filter(Boolean) : [],
+      eventCount: Math.max(0, safeNumber(raw.event_count)),
+      reasons: Array.isArray(raw.reasons) ? (raw.reasons as string[]).map((r) => truncateLabel(safeString(r))) : [],
+    }
+  } catch {
+    return null
+  }
+}
+
+export function formatAssetTypeLabel(at: AssetType): string {
+  return ASSET_TYPE_LABELS[at] || "?"
+}
+
+export function assetTypeColor(at: AssetType): string {
+  return ASSET_TYPE_COLORS[at] || "#9ca3af"
+}
+
+export function getAssetByIp(byIp: Record<string, AssetInfo>, ip: string): AssetInfo | undefined {
+  return byIp[ip]
+}
+
+export function buildV0AssetSummary(classifications: AssetInfo[]): Record<AssetType, number> {
+  const summary = {} as Record<AssetType, number>
+  for (const at of ASSET_TYPES) summary[at] = 0
+  for (const c of classifications) {
+    if (summary[c.assetType] !== undefined) summary[c.assetType]++
+  }
+  return summary
+}
+
+export function buildV0AssetsByZone(classifications: AssetInfo[]): Record<string, number> {
+  const zones: Record<string, number> = {}
+  for (const c of classifications) {
+    const z = c.zone || "unknown"
+    zones[z] = (zones[z] || 0) + 1
+  }
+  return zones
 }
 
 export function isPrivateIp(ip: string): boolean {

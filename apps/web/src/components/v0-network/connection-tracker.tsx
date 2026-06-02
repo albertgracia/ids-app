@@ -1,14 +1,21 @@
 "use client"
 
 import { ProtocolBadge } from "./protocol-badge"
+import { AssetBadge } from "./asset-badge"
 import { formatBytes } from "@/lib/v0-network/mock-data"
 import type { Connection } from "@/lib/v0-network/mock-data"
+import type { AssetInfo, AssetType } from "@/lib/v0-network/real-data-adapter"
 
 interface ConnectionTrackerProps {
   connections: Connection[]
+  assetByIp?: Record<string, AssetInfo>
 }
 
-export function ConnectionTracker({ connections }: ConnectionTrackerProps) {
+export function ConnectionTracker({ connections, assetByIp }: ConnectionTrackerProps) {
+
+  function getAssetType(ip: string): AssetType | undefined {
+    return assetByIp?.[ip]?.assetType
+  }
   return (
     <div className="v0-card">
       <div className="v0-conn-header">
@@ -27,10 +34,12 @@ export function ConnectionTracker({ connections }: ConnectionTrackerProps) {
             </div>
             <div className="v0-conn-ips">
               <span style={{ color: "#06b6d4" }}>{conn.sourceIp}</span>
+              {(() => { const at = getAssetType(conn.sourceIp); return at ? <AssetBadge assetType={at} /> : null })()}
               <span style={{ color: "rgba(255,255,255,0.3)" }}>:</span>
               <span>{conn.sourcePort}</span>
               <span style={{ color: "rgba(255,255,255,0.3)" }}>↔</span>
               <span style={{ color: "#06b6d4" }}>{conn.destIp}</span>
+              {(() => { const at = getAssetType(conn.destIp); return at ? <AssetBadge assetType={at} /> : null })()}
               <span style={{ color: "rgba(255,255,255,0.3)" }}>:</span>
               <span>{conn.destPort}</span>
             </div>
