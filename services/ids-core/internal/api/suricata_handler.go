@@ -9,6 +9,8 @@ import (
 	"github.com/albertgracia/ids-app/services/ids-core/internal/suricata"
 )
 
+const maxSuricataEVEBatchEvents = 100
+
 type SuricataHandler struct {
 	ingestor    *suricata.EVEIngestor
 	broadcaster *eventstream.Broadcaster
@@ -84,14 +86,24 @@ func (h *SuricataHandler) HandleEVEBatch(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	events, err := h.ingestor.IngestJSONLines(r.Context(), body)
+	events, err := suricata.ParseEVEJSONLines(body)
 	if err != nil {
 		writeJSON(w, 400, map[string]string{"error": err.Error()})
 		return
 	}
 
-	if len(events) > 100 {
+	if len(events) == 0 {
+		writeJSON(w, 400, map[string]string{"error": "empty batch"})
+		return
+	}
+
+	if len(events) > maxSuricataEVEBatchEvents {
 		writeJSON(w, 400, map[string]string{"error": "batch exceeds maximum of 100 events"})
+		return
+	}
+
+	if err := h.ingestor.SaveEvents(r.Context(), events); err != nil {
+		writeJSON(w, 500, map[string]string{"error": err.Error()})
 		return
 	}
 

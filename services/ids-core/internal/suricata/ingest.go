@@ -31,6 +31,17 @@ func (i *EVEIngestor) IngestJSON(ctx context.Context, data []byte) (domain.Event
 }
 
 func (i *EVEIngestor) IngestJSONLines(ctx context.Context, data []byte) ([]domain.Event, error) {
+	events, err := ParseEVEJSONLines(data)
+	if err != nil {
+		return nil, err
+	}
+	if err := i.SaveEvents(ctx, events); err != nil {
+		return nil, err
+	}
+	return events, nil
+}
+
+func ParseEVEJSONLines(data []byte) ([]domain.Event, error) {
 	if len(bytes.TrimSpace(data)) == 0 {
 		return nil, fmt.Errorf("empty body")
 	}
@@ -48,10 +59,16 @@ func (i *EVEIngestor) IngestJSONLines(ctx context.Context, data []byte) ([]domai
 		if err != nil {
 			return nil, fmt.Errorf("line %d: %w", lineNum, err)
 		}
-		if err := i.repository.Save(ctx, evt); err != nil {
-			return nil, fmt.Errorf("line %d save: %w", lineNum, err)
-		}
 		events = append(events, evt)
 	}
 	return events, scanner.Err()
+}
+
+func (i *EVEIngestor) SaveEvents(ctx context.Context, events []domain.Event) error {
+	for idx, evt := range events {
+		if err := i.repository.Save(ctx, evt); err != nil {
+			return fmt.Errorf("line %d save: %w", idx+1, err)
+		}
+	}
+	return nil
 }
