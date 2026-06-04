@@ -1,0 +1,1 @@
+CEF:0|Ubiquiti|UniFi Network|10.4.57|IDS_ALERT|Threat detected|8|src=192.168.1.50 dst=8.8.8.8 spt=51515 dpt=53 proto=UDP act=allowed msg=Suspicious DNS query cs1Label=category cs1=Malware

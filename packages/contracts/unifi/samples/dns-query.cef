@@ -1,0 +1,1 @@
+CEF:0|Ubiquiti|UniFi Network|10.4.57|DNS_QUERY|Gateway DNS query|3|src=192.168.1.20 dst=192.168.1.1 proto=UDP request=example.com msg=Gateway DNS query

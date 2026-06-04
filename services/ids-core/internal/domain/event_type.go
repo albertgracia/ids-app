@@ -17,6 +17,11 @@ const (
 	EventTypeOTCommand         EventType = 6
 	EventTypeMalwareIndicator  EventType = 7
 	EventTypeSystem            EventType = 8
+	EventTypeThreatDetected    EventType = 9
+	EventTypeBlockedConnection EventType = 10
+	EventTypeDNSQuery          EventType = 11
+	EventTypeManagementEvent   EventType = 12
+	EventTypeUnclassifiedEvent EventType = 13
 )
 
 var eventTypeNames = map[EventType]string{
@@ -29,6 +34,7 @@ var eventTypeNames = map[EventType]string{
 	EventTypeOTCommand:         "ot_command",
 	EventTypeMalwareIndicator:  "malware_indicator",
 	EventTypeSystem:            "system",
+	EventTypeThreatDetected:    "threat_detected",
 }
 
 var eventTypeValues = map[string]EventType{
@@ -41,6 +47,11 @@ var eventTypeValues = map[string]EventType{
 	"ot_command":         EventTypeOTCommand,
 	"malware_indicator":  EventTypeMalwareIndicator,
 	"system":             EventTypeSystem,
+	"threat_detected":    EventTypeThreatDetected,
+	"blocked_connection": EventTypeBlockedConnection,
+	"dns_query":          EventTypeDNSQuery,
+	"management_event":   EventTypeManagementEvent,
+	"unclassified_event": EventTypeUnclassifiedEvent,
 }
 
 func (et EventType) String() string {
