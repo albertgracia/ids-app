@@ -6,22 +6,80 @@ import (
 	"strings"
 )
 
+var (
+	ErrNoCEFEnvelope               = errors.New("no CEF payload found")
+	ErrUnsupportedUniFiSyslogNoCEF = errors.New("unsupported_unifi_syslog_no_cef")
+)
+
+// SyslogEnvelope describes a minimal syslog prefix that wrapped a CEF payload.
+type SyslogEnvelope struct {
+	RawPrefix string
+	Host      string
+	App       string
+}
+
 // CEFMessage represents a parsed CEF event.
 type CEFMessage struct {
-	Version         string
-	DeviceVendor    string
-	DeviceProduct   string
-	DeviceVersion   string
-	SignatureID     string
-	Name            string
-	Severity        int
-	Extension       map[string]string
-	Raw             string
+	Version       string
+	DeviceVendor  string
+	DeviceProduct string
+	DeviceVersion string
+	SignatureID   string
+	Name          string
+	Severity      int
+	Extension     map[string]string
+	Raw           string
 }
 
 // ParseCEF parses a CEF formatted string into a CEFMessage.
 // It returns an error if the string is not a valid CEF format.
 func ParseCEF(line string) (*CEFMessage, error) {
+	return parseCEFBody(strings.TrimSpace(line))
+}
+
+// ParseUniFiLine parses either a pure CEF line or a syslog-prefixed line that embeds CEF.
+func ParseUniFiLine(line string) (*CEFMessage, SyslogEnvelope, error) {
+	cefLine, envelope, found, err := ExtractCEF(line)
+	if err != nil {
+		return nil, envelope, err
+	}
+	if !found {
+		return nil, envelope, ErrNoCEFEnvelope
+	}
+	msg, err := parseCEFBody(cefLine)
+	if err != nil {
+		return nil, envelope, err
+	}
+	return msg, envelope, nil
+}
+
+// ExtractCEF extracts a CEF payload from a pure CEF line or a syslog envelope.
+func ExtractCEF(line string) (string, SyslogEnvelope, bool, error) {
+	trimmed := strings.TrimSpace(line)
+	if trimmed == "" {
+		return "", SyslogEnvelope{}, false, errors.New("empty line")
+	}
+	if strings.HasPrefix(trimmed, "CEF:") {
+		return trimmed, SyslogEnvelope{}, true, nil
+	}
+
+	idx := strings.Index(trimmed, "CEF:")
+	if idx >= 0 {
+		prefix := strings.TrimSpace(trimmed[:idx])
+		envelope := parseSyslogEnvelope(prefix)
+		return strings.TrimSpace(trimmed[idx:]), envelope, true, nil
+	}
+
+	lower := strings.ToLower(trimmed)
+	if strings.Contains(lower, "unifi") || strings.Contains(lower, "ubiquiti") {
+		envelope := parseSyslogEnvelope(trimmed)
+		return "", envelope, false, ErrUnsupportedUniFiSyslogNoCEF
+	}
+
+	return "", SyslogEnvelope{}, false, ErrNoCEFEnvelope
+}
+
+func parseCEFBody(line string) (*CEFMessage, error) {
 	if line == "" {
 		return nil, errors.New("empty line")
 	}
@@ -61,6 +119,28 @@ func ParseCEF(line string) (*CEFMessage, error) {
 	return msg, nil
 }
 
+func parseSyslogEnvelope(prefix string) SyslogEnvelope {
+	envelope := SyslogEnvelope{RawPrefix: strings.TrimSpace(prefix)}
+	if envelope.RawPrefix == "" {
+		return envelope
+	}
+
+	cleaned := envelope.RawPrefix
+	if strings.HasPrefix(cleaned, "<") {
+		if end := strings.Index(cleaned, ">"); end >= 0 {
+			cleaned = strings.TrimSpace(cleaned[end+1:])
+		}
+	}
+	fields := strings.Fields(cleaned)
+	if len(fields) >= 4 {
+		envelope.Host = fields[3]
+	}
+	if len(fields) >= 5 {
+		envelope.App = strings.TrimSuffix(fields[4], ":")
+	}
+	return envelope
+}
+
 // parseExtensions parses the extension part of a CEF message.
 // Extensions are key=value pairs separated by spaces.
 // Values containing spaces are not quoted but are identified by the fact that
@@ -83,7 +163,7 @@ func parseExtensions(s string) map[string]string {
 			if currentKey != "" {
 				ext[currentKey] = currentValue
 			}
-			
+
 			// Start new key-value pair
 			parts := strings.SplitN(token, "=", 2)
 			currentKey = parts[0]

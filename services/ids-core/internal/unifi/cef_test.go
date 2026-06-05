@@ -1,8 +1,8 @@
 package unifi
 
 import (
-	"testing"
 	"strings"
+	"testing"
 )
 
 func TestParseCEF_ValidIDSAlert(t *testing.T) {
@@ -209,6 +209,76 @@ func TestParseCEF_InvalidPrefix(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "invalid CEF prefix") {
 		t.Errorf("Expected error about invalid CEF prefix, got %v", err)
+	}
+}
+
+func TestExtractCEF_PureCEF(t *testing.T) {
+	line := `CEF:0|Ubiquiti|UniFi Network|10.4.57|IDS_ALERT|Threat detected|8|src=192.168.1.50 dst=8.8.8.8 proto=UDP msg=Suspicious DNS query`
+	cefLine, envelope, found, err := ExtractCEF(line)
+	if err != nil {
+		t.Fatalf("Expected no error, got %v", err)
+	}
+	if !found {
+		t.Fatal("Expected found=true")
+	}
+	if cefLine != line {
+		t.Fatalf("Expected pure CEF line unchanged, got %q", cefLine)
+	}
+	if envelope.RawPrefix != "" {
+		t.Fatalf("Expected empty envelope, got %+v", envelope)
+	}
+}
+
+func TestParseUniFiLine_SyslogEmbeddedCEF_IDSAlert(t *testing.T) {
+	line := `<134>Jun  4 12:34:56 UCG-Fiber CEF:0|Ubiquiti|UniFi Network|10.4.57|IDS_ALERT|Threat detected|8|src=192.168.1.10 dst=203.0.113.10 spt=51515 dpt=53 proto=UDP act=allowed msg=Suspicious DNS query`
+	msg, envelope, err := ParseUniFiLine(line)
+	if err != nil {
+		t.Fatalf("Expected no error, got %v", err)
+	}
+	if msg.SignatureID != "IDS_ALERT" {
+		t.Fatalf("Expected IDS_ALERT, got %s", msg.SignatureID)
+	}
+	if envelope.Host != "UCG-Fiber" {
+		t.Fatalf("Expected host UCG-Fiber, got %+v", envelope)
+	}
+	if msg.Extension["dst"] != "203.0.113.10" {
+		t.Fatalf("Expected dst 203.0.113.10, got %s", msg.Extension["dst"])
+	}
+}
+
+func TestParseUniFiLine_SyslogEmbeddedCEF_Firewall(t *testing.T) {
+	line := `Jun  4 12:34:56 ubuntu-ialab promtail[1234]: CEF:0|Ubiquiti|UniFi Network|10.4.57|FIREWALL_BLOCK|Blocked connection|6|src=192.168.1.10 dst=203.0.113.10 spt=44321 dpt=22 proto=TCP act=blocked msg=Blocked WAN SSH attempt`
+	msg, envelope, err := ParseUniFiLine(line)
+	if err != nil {
+		t.Fatalf("Expected no error, got %v", err)
+	}
+	if msg.SignatureID != "FIREWALL_BLOCK" {
+		t.Fatalf("Expected FIREWALL_BLOCK, got %s", msg.SignatureID)
+	}
+	if envelope.Host != "ubuntu-ialab" {
+		t.Fatalf("Expected host ubuntu-ialab, got %+v", envelope)
+	}
+	if envelope.App != "promtail[1234]" {
+		t.Fatalf("Expected app promtail[1234], got %+v", envelope)
+	}
+	if msg.Extension["dpt"] != "22" || msg.Extension["proto"] != "TCP" {
+		t.Fatalf("Unexpected extension map: %+v", msg.Extension)
+	}
+}
+
+func TestParseUniFiLine_UnsupportedUniFiNoCEF(t *testing.T) {
+	line := `Jun  4 12:34:56 UCG-Fiber UniFi Network Application: gateway event from CLIENT-REDACTED to example.com`
+	_, _, err := ParseUniFiLine(line)
+	if err != ErrUnsupportedUniFiSyslogNoCEF {
+		t.Fatalf("Expected ErrUnsupportedUniFiSyslogNoCEF, got %v", err)
+	}
+}
+
+func TestParseUniFiLine_NoiseWithoutCEF(t *testing.T) {
+	line := `random daemon message without any relevant payload`
+	_, _, err := ParseUniFiLine(line)
+	if err != ErrNoCEFEnvelope {
+		t.Fatalf("Expected ErrNoCEFEnvelope, got %v", err)
 	}
 }
 

@@ -10,6 +10,14 @@ These samples are artificially generated and do not contain real data, secrets, 
 
 They are intended for use in developing and testing the UniFi CEF parser.
 
+Tambien incluyen variantes sinteticas de formatos observados de manera abstracta:
+
+- `CEF` puro que empieza por `CEF:`
+- lineas `syslog` con `CEF` embebido
+- lineas UniFi/syslog candidatas sin `CEF`, usadas para validar clasificacion segura
+
+No se incluyen logs reales ni muestras derivadas directamente de logs reales.
+
 ## Format
 
 The samples follow the CEF format:
@@ -82,9 +90,16 @@ Get-Content ..\..\packages\contracts\unifi\samples\ids-alert.cef | go run ./cmd/
 - `--dedupe=true`: deduplicacion in-memory por `raw_hash`.
 - `--include-raw=false`: no imprime el mensaje raw por defecto.
 
+### Soporte de formatos
+
+- `CEF` puro: soportado.
+- `syslog` con `CEF` embebido: soportado por el collector paralelo.
+- `syslog` UniFi sin `CEF`: clasificado de forma segura como no soportado, sin falso positivo.
+
 ## Advertencias
 
 - Los archivos en `samples/` son sinteticos. No representan trafico real ni contienen secretos.
 - Esta fase no instala collector, no crea listeners UDP/TCP y no reenvia eventos a runtime/staging.
 - El parser actual cubre el subconjunto CEF usado por los samples; no sustituye una validacion con logs reales de UniFi.
 - El collector paralelo actual es solo local/dry-run; no conecta con `.30`, `.40`, Promtail, Loki ni Grafana.
+- Las muestras `syslog-embedded-*` y `syslog-unifi-no-cef.log` representan formas observadas de manera abstracta; no derivan directamente de logs reales commiteados.

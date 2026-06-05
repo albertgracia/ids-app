@@ -298,11 +298,22 @@ func processLine(cfg config, entry lineInput, seen map[string]struct{}) result {
 		seen[rawHash] = struct{}{}
 	}
 
-	cefMessage, err := unifi.ParseCEF(entry.Raw)
+	cefMessage, envelope, err := unifi.ParseUniFiLine(entry.Raw)
 	if err != nil {
-		record.ParseStatus = parseStatusError
-		record.Error = err.Error()
-		return result{record: record, err: err}
+		switch {
+		case errors.Is(err, unifi.ErrUnsupportedUniFiSyslogNoCEF):
+			record.ParseStatus = parseStatusSkipped
+			record.Warnings = append(record.Warnings, "unsupported_unifi_syslog_no_cef")
+			return result{record: record}
+		case errors.Is(err, unifi.ErrNoCEFEnvelope):
+			record.ParseStatus = parseStatusError
+			record.Error = "no CEF payload found"
+			return result{record: record, err: err}
+		default:
+			record.ParseStatus = parseStatusError
+			record.Error = err.Error()
+			return result{record: record, err: err}
+		}
 	}
 
 	normalized, err := unifi.NormalizeCEF(cefMessage)
@@ -317,7 +328,7 @@ func processLine(cfg config, entry lineInput, seen map[string]struct{}) result {
 	}
 	normalized.Metadata["unifi.raw_message_hash"] = rawHash
 
-	warnings := collectWarnings(entry.Raw, cefMessage, normalized)
+	warnings := collectWarnings(entry.Raw, envelope, cefMessage, normalized)
 	record.Warnings = warnings
 	normalizedCopy := projectNormalized(normalized)
 	record.Normalized = &normalizedCopy
@@ -334,25 +345,28 @@ func processLine(cfg config, entry lineInput, seen map[string]struct{}) result {
 	return result{record: record}
 }
 
-func collectWarnings(raw string, cefMessage *unifi.CEFMessage, normalized *unifi.UniFiEvent) []string {
+func collectWarnings(raw string, envelope unifi.SyslogEnvelope, cefMessage *unifi.CEFMessage, normalized *unifi.UniFiEvent) []string {
 	warnings := make([]string, 0)
+	if envelope.RawPrefix != "" {
+		warnings = append(warnings, "syslog_envelope_detected", "embedded_cef_extracted")
+	}
 	if strings.Contains(raw, `\|`) || strings.Contains(raw, `\=`) {
-		warnings = append(warnings, "unsupported escape pattern")
+		warnings = append(warnings, "unsupported_cef_escape_pattern")
 	}
 	if normalized.EventType == "unclassified_event" {
-		warnings = append(warnings, "unknown signature")
+		warnings = append(warnings, "unknown_signature")
 	}
 	if normalized.SrcIP == "" {
-		warnings = append(warnings, "missing src")
+		warnings = append(warnings, "missing_src")
 	}
 	if normalized.DestIP == "" {
-		warnings = append(warnings, "missing dst")
+		warnings = append(warnings, "missing_dst")
 	}
 	if rawPort, ok := cefMessage.Extension["spt"]; ok && !isValidPort(rawPort) {
-		warnings = append(warnings, "invalid src port")
+		warnings = append(warnings, "invalid_src_port")
 	}
 	if rawPort, ok := cefMessage.Extension["dpt"]; ok && !isValidPort(rawPort) {
-		warnings = append(warnings, "invalid dst port")
+		warnings = append(warnings, "invalid_dst_port")
 	}
 	return warnings
 }

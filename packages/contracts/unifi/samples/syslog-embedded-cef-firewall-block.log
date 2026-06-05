@@ -1,0 +1,1 @@
+Jun  4 12:34:56 ubuntu-ialab promtail[1234]: CEF:0|Ubiquiti|UniFi Network|10.4.57|FIREWALL_BLOCK|Blocked connection|6|src=192.168.1.10 dst=203.0.113.10 spt=44321 dpt=22 proto=TCP act=blocked msg=Blocked WAN SSH attempt

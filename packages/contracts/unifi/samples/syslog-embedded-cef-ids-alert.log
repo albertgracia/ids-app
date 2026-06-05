@@ -1,0 +1,1 @@
+<134>Jun  4 12:34:56 UCG-Fiber CEF:0|Ubiquiti|UniFi Network|10.4.57|IDS_ALERT|Threat detected|8|src=192.168.1.10 dst=203.0.113.10 spt=51515 dpt=53 proto=UDP act=allowed msg=Suspicious DNS query

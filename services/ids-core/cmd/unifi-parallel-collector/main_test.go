@@ -108,8 +108,8 @@ func TestRunInvalidCEFReturnsExitOne(t *testing.T) {
 	if lines[0].ParseStatus != parseStatusError {
 		t.Fatalf("expected error status, got %s", lines[0].ParseStatus)
 	}
-	if !strings.Contains(lines[0].Error, "invalid CEF prefix") {
-		t.Fatalf("expected invalid CEF prefix error, got %+v", lines[0])
+	if !strings.Contains(lines[0].Error, "no CEF payload found") {
+		t.Fatalf("expected no CEF payload found error, got %+v", lines[0])
 	}
 }
 
@@ -139,6 +139,62 @@ func TestRunOutputJSONIsValid(t *testing.T) {
 	}
 	if len(payload.Events) != 1 || payload.Summary.Parsed != 1 {
 		t.Fatalf("unexpected payload: %+v", payload)
+	}
+}
+
+func TestRunSyslogEmbeddedCEFParsed(t *testing.T) {
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	path := filepath.Join("..", "..", "..", "..", "packages", "contracts", "unifi", "samples", "syslog-embedded-cef-ids-alert.log")
+	exitCode := run([]string{"--input", path}, strings.NewReader(""), &stdout, &stderr)
+	if exitCode != exitOK {
+		t.Fatalf("expected exit 0, got %d stderr=%s", exitCode, stderr.String())
+	}
+	lines := decodeNDJSONRecords(t, stdout.String())
+	if lines[0].ParseStatus != parseStatusOK {
+		t.Fatalf("expected parse status ok, got %s", lines[0].ParseStatus)
+	}
+	if !contains(lines[0].Warnings, "syslog_envelope_detected") || !contains(lines[0].Warnings, "embedded_cef_extracted") {
+		t.Fatalf("expected syslog extraction warnings, got %+v", lines[0].Warnings)
+	}
+	if lines[len(lines)-1].Summary.Parsed != 1 {
+		t.Fatalf("expected summary parsed=1, got %+v", lines[len(lines)-1].Summary)
+	}
+}
+
+func TestRunSyslogUniFiNoCEFSkipped(t *testing.T) {
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	path := filepath.Join("..", "..", "..", "..", "packages", "contracts", "unifi", "samples", "syslog-unifi-no-cef.log")
+	exitCode := run([]string{"--input", path}, strings.NewReader(""), &stdout, &stderr)
+	if exitCode != exitOK {
+		t.Fatalf("expected exit 0, got %d stderr=%s", exitCode, stderr.String())
+	}
+	lines := decodeNDJSONRecords(t, stdout.String())
+	if lines[0].ParseStatus != parseStatusSkipped {
+		t.Fatalf("expected skipped status, got %s", lines[0].ParseStatus)
+	}
+	if !contains(lines[0].Warnings, "unsupported_unifi_syslog_no_cef") {
+		t.Fatalf("expected unsupported_unifi_syslog_no_cef warning, got %+v", lines[0].Warnings)
+	}
+	if lines[len(lines)-1].Summary.Skipped != 1 {
+		t.Fatalf("expected summary skipped=1, got %+v", lines[len(lines)-1].Summary)
+	}
+}
+
+func TestRunNoiseWithoutCEFReturnsExitOne(t *testing.T) {
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	exitCode := run([]string{"--stdin"}, strings.NewReader("random daemon message\n"), &stdout, &stderr)
+	if exitCode != exitParseError {
+		t.Fatalf("expected exit 1, got %d", exitCode)
+	}
+	lines := decodeNDJSONRecords(t, stdout.String())
+	if lines[0].ParseStatus != parseStatusError {
+		t.Fatalf("expected error status, got %s", lines[0].ParseStatus)
+	}
+	if lines[len(lines)-1].Summary.Errors != 1 {
+		t.Fatalf("expected summary errors=1, got %+v", lines[len(lines)-1].Summary)
 	}
 }
 
@@ -192,4 +248,13 @@ func decodeNDJSONRecords(t *testing.T, output string) []outputRecord {
 		t.Fatalf("scanner error: %v", err)
 	}
 	return records
+}
+
+func contains(values []string, target string) bool {
+	for _, value := range values {
+		if value == target {
+			return true
+		}
+	}
+	return false
 }
