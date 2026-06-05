@@ -12,6 +12,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/albertgracia/ids-app/services/ids-core/internal/domain"
 	"github.com/albertgracia/ids-app/services/ids-core/internal/ingest"
@@ -53,6 +54,12 @@ func (i *inputList) Set(value string) error {
 type config struct {
 	inputs              inputList
 	useStdin            bool
+	tailFile            string
+	stateFile           string
+	startPosition       string
+	once                bool
+	pollInterval        time.Duration
+	dryRun              bool
 	output              string
 	mode                string
 	dedupe              bool
@@ -151,6 +158,9 @@ func run(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 	if code != exitOK {
 		return code
 	}
+	if cfg.tailFile != "" {
+		return runTailMode(cfg, stdout, stderr)
+	}
 
 	lines, err := collectInputs(cfg, stdin)
 	if err != nil {
@@ -221,6 +231,12 @@ func parseConfig(args []string, stderr io.Writer) (config, int) {
 	fs.SetOutput(stderr)
 	fs.Var(&cfg.inputs, "input", "Ruta a archivo CEF de entrada. Repetible.")
 	fs.BoolVar(&cfg.useStdin, "stdin", false, "Leer mensajes CEF desde STDIN.")
+	fs.StringVar(&cfg.tailFile, "tail-file", "", "Archivo local a leer incrementalmente en modo tail.")
+	fs.StringVar(&cfg.stateFile, "state-file", "", "Archivo JSON para persistir offset del modo tail.")
+	fs.StringVar(&cfg.startPosition, "start-position", "end", "Posicion inicial para modo tail: beginning|end")
+	fs.BoolVar(&cfg.once, "once", false, "En modo tail, procesa lo disponible y sale.")
+	fs.DurationVar(&cfg.pollInterval, "poll-interval", time.Second, "Intervalo de polling para modo tail futuro.")
+	fs.BoolVar(&cfg.dryRun, "dry-run", false, "Alias explicito de modo local sin envio; fuerza send=false.")
 	fs.StringVar(&cfg.output, "output", outputNDJSON, "Salida: ndjson|json")
 	fs.StringVar(&cfg.mode, "mode", modeDryRun, "Modo operativo. Solo se admite dry-run.")
 	fs.BoolVar(&cfg.dedupe, "dedupe", true, "Activar deduplicacion por raw_hash.")
@@ -238,6 +254,9 @@ func parseConfig(args []string, stderr io.Writer) (config, int) {
 	if err := fs.Parse(args); err != nil {
 		return config{}, exitInvalidConfig
 	}
+	if cfg.dryRun {
+		cfg.send = false
+	}
 	if strings.TrimSpace(cfg.mode) != modeDryRun {
 		fmt.Fprintln(stderr, "error: solo se admite --mode dry-run")
 		return config{}, exitInvalidConfig
@@ -246,8 +265,24 @@ func parseConfig(args []string, stderr io.Writer) (config, int) {
 		fmt.Fprintf(stderr, "error: --output invalido %q; use ndjson o json\n", cfg.output)
 		return config{}, exitInvalidConfig
 	}
-	if len(cfg.inputs) == 0 && !cfg.useStdin {
+	if cfg.tailFile == "" && len(cfg.inputs) == 0 && !cfg.useStdin {
 		fmt.Fprintln(stderr, "error: debe indicar --input o --stdin")
+		return config{}, exitInvalidConfig
+	}
+	if cfg.tailFile != "" && (len(cfg.inputs) > 0 || cfg.useStdin) {
+		fmt.Fprintln(stderr, "error: --tail-file no se puede combinar con --input o --stdin")
+		return config{}, exitInvalidConfig
+	}
+	if cfg.startPosition != "beginning" && cfg.startPosition != "end" {
+		fmt.Fprintln(stderr, "error: --start-position debe ser beginning o end")
+		return config{}, exitInvalidConfig
+	}
+	if cfg.tailFile != "" && !cfg.once {
+		fmt.Fprintln(stderr, "error: modo tail sin --once aun no implementado en esta fase")
+		return config{}, exitInvalidConfig
+	}
+	if cfg.tailFile != "" && cfg.stateFile == "" && !cfg.once {
+		fmt.Fprintln(stderr, "error: --state-file es obligatorio en modo tail sin --once")
 		return config{}, exitInvalidConfig
 	}
 	if cfg.batchSize < 1 || cfg.batchSize > ingest.MaxUniFiIngestBatchEvents {

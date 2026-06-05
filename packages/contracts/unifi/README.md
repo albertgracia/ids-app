@@ -118,6 +118,32 @@ go run ./cmd/unifi-parallel-collector --input ..\..\packages\contracts\unifi\sam
 - el sender local rechaza endpoints no locales como `192.168.1.40` o `ids-observabilidad`;
 - no imprimir ni commitear tokens.
 
+## File-tail local dry-run
+
+El collector paralelo puede leer un archivo local sintético en modo tail sin enviar nada por defecto.
+
+### Flags de file-tail
+
+- `--tail-file <path>`: archivo local a leer incrementalmente.
+- `--state-file <path>`: state-file JSON para offset/estado.
+- `--start-position beginning|end`: posicion inicial. Default `end`.
+- `--once`: procesa lo disponible y sale.
+- `--poll-interval 1s`: reservado para modo polling futuro.
+- `--send=false`: por defecto, no hace `POST`.
+
+### Reglas de la fase local
+
+- usar solo archivos sintéticos locales;
+- no usar logs reales;
+- el state-file no contiene secretos ni raw completo;
+- no enviar a `.40`.
+
+### Ejemplo local
+
+```powershell
+go run ./cmd/unifi-parallel-collector --tail-file C:\temp\synthetic-unifi.log --state-file C:\temp\state.json --start-position beginning --once --ingest-batch --send=false --collector-id unifi-tail-local --source-host synthetic-gateway --print-payload-summary
+```
+
 ### Soporte de formatos
 
 - `CEF` puro: soportado.
