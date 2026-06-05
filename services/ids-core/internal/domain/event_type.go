@@ -35,6 +35,10 @@ var eventTypeNames = map[EventType]string{
 	EventTypeMalwareIndicator:  "malware_indicator",
 	EventTypeSystem:            "system",
 	EventTypeThreatDetected:    "threat_detected",
+	EventTypeBlockedConnection: "blocked_connection",
+	EventTypeDNSQuery:          "dns_query",
+	EventTypeManagementEvent:   "management_event",
+	EventTypeUnclassifiedEvent: "unclassified_event",
 }
 
 var eventTypeValues = map[string]EventType{

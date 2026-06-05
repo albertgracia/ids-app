@@ -212,6 +212,7 @@ Ruta recomendada:
 - no expuesto por Nginx/Cloudflare;
 - accesible solo local o por red controlada;
 - request sin auth -> `401`;
+- token no configurado en runtime -> `503`;
 - content-type incorrecto -> `400`;
 - lote vacio -> `400`;
 - lote > maximo -> `400`;
@@ -339,8 +340,9 @@ No registrar:
 
 ### Dedupe inicial
 
-- dedupe por `idempotency_key` dentro de ventana temporal de 5 minutos;
-- suficiente para duplicates exactos y replay de lote.
+- dedupe por `idempotency_key` dentro del lote;
+- dedupe in-memory cross-request dentro del proceso en ventana temporal de 5 minutos;
+- suficiente para duplicates exactos y replay simple mientras el proceso sigue vivo.
 
 ### Duplicados naturales UniFi
 
@@ -374,7 +376,7 @@ Decision de diseño:
 
 - no confiar en el `id` actual para idempotencia;
 - fase futura debe introducir persistencia de `idempotency_key` (tabla dedicada o indice unico adicional);
-- en modo `memory`, usar cache LRU temporal con riesgo explicitamente aceptado.
+- en modo `memory`, usar cache temporal en proceso con riesgo explicitamente aceptado.
 
 ## 10. Batch, limites y backpressure
 

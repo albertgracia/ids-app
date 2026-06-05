@@ -75,6 +75,7 @@ func main() {
 
 	simulator := ingest.NewSimulator(nil)
 	handler := api.NewEventHandler(repo, simulator, broadcaster)
+	uniFiHandler := api.NewUniFiIngestHandler(repo, broadcaster)
 
 	eveIngestor := suricata.NewEVEIngestor(repo)
 	suriHandler := api.NewSuricataHandler(eveIngestor, broadcaster)
@@ -88,6 +89,7 @@ func main() {
 	mux.HandleFunc("/api/v1/simulate/events", handler.HandleSimulateEvents)
 	mux.HandleFunc("/api/v1/suricata/eve", suriHandler.HandleEVE)
 	mux.HandleFunc("/api/v1/suricata/eve/batch", suriHandler.HandleEVEBatch)
+	mux.HandleFunc("/api/internal/v1/ingest/events/unifi", uniFiHandler.HandleBatch)
 	mux.HandleFunc("/api/v1/events/stream", eventstream.SSEHandler(broadcaster))
 	mux.HandleFunc("/api/v1/assets/classifications", assetHandler.HandleClassifications)
 	mux.HandleFunc("/api/v1/assets/classification", assetHandler.HandleIPClassification)
@@ -145,6 +147,7 @@ func handleStatus(w http.ResponseWriter, r *http.Request) {
 			"simulated_ingest",
 			"suricata_eve_parser",
 			"suricata_eve_ingest",
+			"unifi_internal_ingest_dry_run",
 			"live_events_stream",
 			"asset_behavior_classifier",
 		},
