@@ -47,8 +47,44 @@ Get-Content ..\..\packages\contracts\unifi\samples\ids-alert.cef | go run ./cmd/
 - `--output domain`: solo proyeccion JSON del `domain.Event` resultante.
 - `--output both`: incluye ambas vistas. Es el valor por defecto.
 
+## Parallel Collector CLI local
+
+El collector paralelo UniFi se implementa primero como herramienta local, one-shot y dry-run. No abre puertos, no crea listeners y no hace `POST` a `ids-core`.
+
+Ejecutar desde `services/ids-core`:
+
+### Archivo unico
+
+```powershell
+go run ./cmd/unifi-parallel-collector --input ..\..\packages\contracts\unifi\samples\ids-alert.cef
+```
+
+### Varios archivos
+
+```powershell
+go run ./cmd/unifi-parallel-collector --input ..\..\packages\contracts\unifi\samples\ids-alert.cef --input ..\..\packages\contracts\unifi\samples\firewall-blocked.cef --input ..\..\packages\contracts\unifi\samples\dns-query.cef --input ..\..\packages\contracts\unifi\samples\device-management.cef
+```
+
+### STDIN
+
+```powershell
+Get-Content ..\..\packages\contracts\unifi\samples\ids-alert.cef | go run ./cmd/unifi-parallel-collector --stdin
+```
+
+### Modos de salida
+
+- `--output ndjson`: salida por defecto, una linea JSON por evento mas una linea final de resumen.
+- `--output json`: objeto JSON pretty con `events` y `summary`.
+
+### Flags relevantes
+
+- `--mode dry-run`: unico modo soportado.
+- `--dedupe=true`: deduplicacion in-memory por `raw_hash`.
+- `--include-raw=false`: no imprime el mensaje raw por defecto.
+
 ## Advertencias
 
 - Los archivos en `samples/` son sinteticos. No representan trafico real ni contienen secretos.
 - Esta fase no instala collector, no crea listeners UDP/TCP y no reenvia eventos a runtime/staging.
 - El parser actual cubre el subconjunto CEF usado por los samples; no sustituye una validacion con logs reales de UniFi.
+- El collector paralelo actual es solo local/dry-run; no conecta con `.30`, `.40`, Promtail, Loki ni Grafana.
