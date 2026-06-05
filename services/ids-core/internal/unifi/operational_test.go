@@ -299,3 +299,178 @@ func TestParseOperationalSyslog_WithPathInProcess(t *testing.T) {
 		t.Errorf("expected process coredns (not /usr/bin/coredns), got %s", msg.Process)
 	}
 }
+
+func TestParseOperationalSyslog_MCAHeartbeat(t *testing.T) {
+	line := `Jun  5 12:06:00 OBS-HOST Cloud-Gateway-Fiber-Labraza MCA[7777]: device agent heartbeat completed successfully`
+	msg, err := ParseOperationalSyslog(line)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if msg.Process != "MCA" {
+		t.Errorf("expected process MCA, got %s", msg.Process)
+	}
+	if msg.Kind != KindMCAEvent {
+		t.Errorf("expected kind mca_event, got %s", msg.Kind)
+	}
+	if msg.PID != "7777" {
+		t.Errorf("expected pid 7777, got %s", msg.PID)
+	}
+}
+
+func TestParseOperationalSyslog_MCADTimeout(t *testing.T) {
+	line := `Jun  5 12:06:30 OBS-HOST Cloud-Gateway-Fiber-Labraza mcad[7778]: management connection timeout while syncing device state`
+	msg, err := ParseOperationalSyslog(line)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if msg.Process != "mcad" {
+		t.Errorf("expected process mcad, got %s", msg.Process)
+	}
+	if msg.Kind != KindMCAEvent {
+		t.Errorf("expected kind mca_event, got %s", msg.Kind)
+	}
+}
+
+func TestParseOperationalSyslog_DPIFlowStatsInfo(t *testing.T) {
+	line := `Jun  5 12:07:00 OBS-HOST Cloud-Gateway-Fiber-Labraza dpi-flow-stats[8888]: flow stats batch exported successfully`
+	msg, err := ParseOperationalSyslog(line)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if msg.Process != "dpi-flow-stats" {
+		t.Errorf("expected process dpi-flow-stats, got %s", msg.Process)
+	}
+	if msg.Kind != KindDPIFlowStatsEvent {
+		t.Errorf("expected kind dpi_flow_stats_event, got %s", msg.Kind)
+	}
+	if msg.PID != "8888" {
+		t.Errorf("expected pid 8888, got %s", msg.PID)
+	}
+}
+
+func TestParseOperationalSyslog_UbiosDPIFlowStatsTimeout(t *testing.T) {
+	line := `Jun  5 12:07:30 OBS-HOST Cloud-Gateway-Fiber-Labraza ubios-udapi-server[8889]: DPI flow stats timeout while updating counters`
+	msg, err := ParseOperationalSyslog(line)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if msg.Process != "ubios-udapi-server" {
+		t.Errorf("expected process ubios-udapi-server, got %s", msg.Process)
+	}
+	if msg.Kind != KindDPIFlowStatsEvent {
+		t.Errorf("expected kind dpi_flow_stats_event, got %s", msg.Kind)
+	}
+}
+
+func TestParseOperationalSyslog_SystemdInfo(t *testing.T) {
+	line := `Jun  5 12:08:00 OBS-HOST Cloud-Gateway-Fiber-Labraza systemd[1]: Started UniFi operational service`
+	msg, err := ParseOperationalSyslog(line)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if msg.Process != "systemd" {
+		t.Errorf("expected process systemd, got %s", msg.Process)
+	}
+	if msg.Kind != KindSystemdEvent {
+		t.Errorf("expected kind systemd_event, got %s", msg.Kind)
+	}
+}
+
+func TestNormalizeOperational_MCAHeartbeat(t *testing.T) {
+	line := `Jun  5 12:06:00 OBS-HOST Cloud-Gateway-Fiber-Labraza MCA[7777]: device agent heartbeat completed successfully`
+	msg, err := ParseOperationalSyslog(line)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+
+	event := NormalizeOperational(msg)
+	if event.EventType != "system" {
+		t.Errorf("expected event_type system, got %s", event.EventType)
+	}
+	if event.Severity != 0 {
+		t.Errorf("expected severity 0 (info), got %d", event.Severity)
+	}
+	if event.Metadata["unifi.event_kind"] != "mca_event" {
+		t.Errorf("expected event_kind mca_event, got %s", event.Metadata["unifi.event_kind"])
+	}
+	if event.Metadata["unifi.process"] != "MCA" {
+		t.Errorf("expected process MCA, got %s", event.Metadata["unifi.process"])
+	}
+	if event.Metadata["unifi.pid"] != "7777" {
+		t.Errorf("expected pid 7777, got %s", event.Metadata["unifi.pid"])
+	}
+	domainEvent, err := event.ToDomainEvent()
+	if err != nil {
+		t.Fatalf("expected no error from ToDomainEvent, got %v", err)
+	}
+	if domainEvent.Title == "" {
+		t.Error("expected non-empty title")
+	}
+}
+
+func TestNormalizeOperational_MCADTimeoutSeverityLow(t *testing.T) {
+	line := `Jun  5 12:06:30 OBS-HOST Cloud-Gateway-Fiber-Labraza mcad[7778]: management connection timeout while syncing device state`
+	msg, err := ParseOperationalSyslog(line)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+
+	event := NormalizeOperational(msg)
+	if event.Severity != 1 {
+		t.Errorf("expected severity 1 (low - timeout), got %d", event.Severity)
+	}
+}
+
+func TestNormalizeOperational_DPIFlowStatsInfo(t *testing.T) {
+	line := `Jun  5 12:07:00 OBS-HOST Cloud-Gateway-Fiber-Labraza dpi-flow-stats[8888]: flow stats batch exported successfully`
+	msg, err := ParseOperationalSyslog(line)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+
+	event := NormalizeOperational(msg)
+	if event.EventType != "network_connection" {
+		t.Errorf("expected event_type network_connection, got %s", event.EventType)
+	}
+	if event.Severity != 0 {
+		t.Errorf("expected severity 0 (info), got %d", event.Severity)
+	}
+	if event.Metadata["unifi.event_kind"] != "dpi_flow_stats_event" {
+		t.Errorf("expected event_kind dpi_flow_stats_event, got %s", event.Metadata["unifi.event_kind"])
+	}
+}
+
+func TestNormalizeOperational_UbiosDPIFlowStatsTimeoutSeverityLow(t *testing.T) {
+	line := `Jun  5 12:07:30 OBS-HOST Cloud-Gateway-Fiber-Labraza ubios-udapi-server[8889]: DPI flow stats timeout while updating counters`
+	msg, err := ParseOperationalSyslog(line)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+
+	event := NormalizeOperational(msg)
+	if event.Severity != 1 {
+		t.Errorf("expected severity 1 (low - timeout), got %d", event.Severity)
+	}
+	if event.Metadata["unifi.event_kind"] != "dpi_flow_stats_event" {
+		t.Errorf("expected event_kind dpi_flow_stats_event, got %s", event.Metadata["unifi.event_kind"])
+	}
+}
+
+func TestNormalizeOperational_SystemdServiceInfo(t *testing.T) {
+	line := `Jun  5 12:08:00 OBS-HOST Cloud-Gateway-Fiber-Labraza systemd[1]: Started UniFi operational service`
+	msg, err := ParseOperationalSyslog(line)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+
+	event := NormalizeOperational(msg)
+	if event.EventType != "system" {
+		t.Errorf("expected event_type system, got %s", event.EventType)
+	}
+	if event.Severity != 0 {
+		t.Errorf("expected severity 0 (info), got %d", event.Severity)
+	}
+	if event.Metadata["unifi.event_kind"] != "systemd_event" {
+		t.Errorf("expected event_kind systemd_event, got %s", event.Metadata["unifi.event_kind"])
+	}
+}

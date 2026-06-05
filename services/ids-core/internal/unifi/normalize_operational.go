@@ -78,6 +78,12 @@ func mapKindToEventType(kind OperationalEventKind) string {
 		return "system"
 	case KindSyslogOperational:
 		return "system"
+	case KindMCAEvent:
+		return "system"
+	case KindDPIFlowStatsEvent:
+		return "network_connection"
+	case KindSystemdEvent:
+		return "system"
 	default:
 		return "unclassified_event"
 	}
@@ -95,6 +101,12 @@ func mapKindToCategory(kind OperationalEventKind) string {
 		return "Health"
 	case KindSyslogOperational:
 		return "Operational"
+	case KindMCAEvent:
+		return "MCA"
+	case KindDPIFlowStatsEvent:
+		return "DPI"
+	case KindSystemdEvent:
+		return "System"
 	default:
 		return "Unclassified"
 	}
@@ -157,6 +169,30 @@ func mapKindToSeverityNum(msg *OperationalSyslogMessage) int {
 		}
 		return 0
 
+	case KindMCAEvent:
+		if strings.Contains(contentLower, "failed") || strings.Contains(contentLower, "failure") || strings.Contains(contentLower, "error") || strings.Contains(contentLower, "unable") {
+			return 3
+		}
+		if strings.Contains(contentLower, "timeout") || strings.Contains(contentLower, "disconnected") || strings.Contains(contentLower, "unavailable") || strings.Contains(contentLower, "retry") || strings.Contains(contentLower, "warning") {
+			return 1
+		}
+		return 0
+
+	case KindDPIFlowStatsEvent:
+		if strings.Contains(contentLower, "failed") || strings.Contains(contentLower, "failure") || strings.Contains(contentLower, "error") || strings.Contains(contentLower, "unable") || strings.Contains(contentLower, "queue full") || strings.Contains(contentLower, "dropped") {
+			return 3
+		}
+		if strings.Contains(contentLower, "timeout") || strings.Contains(contentLower, "retry") || strings.Contains(contentLower, "warning") {
+			return 1
+		}
+		return 0
+
+	case KindSystemdEvent:
+		if strings.Contains(contentLower, "failed") || strings.Contains(contentLower, "failure") || strings.Contains(contentLower, "error") || strings.Contains(contentLower, "stopped unexpectedly") {
+			return 3
+		}
+		return 0
+
 	default:
 		return 0
 	}
@@ -206,6 +242,38 @@ func buildSafeMessage(msg *OperationalSyslogMessage) string {
 
 	if msg.Kind == KindSyslogOperational {
 		return "Syslog-ng lifecycle event"
+	}
+
+	if msg.Kind == KindMCAEvent {
+		msgLower := strings.ToLower(msgText)
+		if strings.Contains(msgLower, "timeout") {
+			return "MCA device agent connection timeout"
+		}
+		if strings.Contains(msgLower, "fail") {
+			return "MCA device agent operation failed"
+		}
+		if strings.Contains(msgLower, "error") {
+			return "MCA device agent error"
+		}
+		if strings.Contains(msgLower, "heartbeat") {
+			return "MCA device agent heartbeat"
+		}
+		return "MCA device agent event"
+	}
+
+	if msg.Kind == KindDPIFlowStatsEvent {
+		msgLower := strings.ToLower(msgText)
+		if strings.Contains(msgLower, "timeout") {
+			return "DPI flow stats timeout"
+		}
+		if strings.Contains(msgLower, "fail") {
+			return "DPI flow stats failure"
+		}
+		return "DPI flow stats event"
+	}
+
+	if msg.Kind == KindSystemdEvent {
+		return "Systemd service event"
 	}
 
 	first := strings.SplitN(msgText, " ", 2)

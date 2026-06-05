@@ -15,12 +15,15 @@ var (
 type OperationalEventKind string
 
 const (
-	KindDNSGatewayEvent    OperationalEventKind = "dns_gateway_event"
-	KindDPIEvent           OperationalEventKind = "dpi_event"
-	KindDHCPIPv6Event      OperationalEventKind = "dhcp_ipv6_event"
-	KindGatewayHealthEvent OperationalEventKind = "gateway_health_event"
-	KindSyslogOperational  OperationalEventKind = "syslog_operational_event"
-	KindUnclassified       OperationalEventKind = "unclassified_unifi_syslog"
+	KindDNSGatewayEvent     OperationalEventKind = "dns_gateway_event"
+	KindDPIEvent            OperationalEventKind = "dpi_event"
+	KindDHCPIPv6Event       OperationalEventKind = "dhcp_ipv6_event"
+	KindGatewayHealthEvent  OperationalEventKind = "gateway_health_event"
+	KindSyslogOperational   OperationalEventKind = "syslog_operational_event"
+	KindMCAEvent            OperationalEventKind = "mca_event"
+	KindDPIFlowStatsEvent   OperationalEventKind = "dpi_flow_stats_event"
+	KindSystemdEvent        OperationalEventKind = "systemd_event"
+	KindUnclassified        OperationalEventKind = "unclassified_unifi_syslog"
 )
 
 type OperationalSyslogMessage struct {
@@ -136,10 +139,13 @@ func classifyOperational(msg *OperationalSyslogMessage) {
 	case "coredns", "CoreDNS":
 		msg.Kind = KindDNSGatewayEvent
 	case "ubios-udapi-server":
-		if strings.Contains(msg.Message, "dpi") || strings.Contains(msg.Message, "DPI") || msg.PID == "" && strings.Contains(msg.Message, "dpi") {
-			msg.Kind = KindDPIEvent
-		} else if strings.Contains(msg.Message, "odhcp6c") {
+		lower := strings.ToLower(msg.Message)
+		if strings.Contains(msg.Message, "odhcp6c") {
 			msg.Kind = KindDHCPIPv6Event
+		} else if strings.Contains(lower, "flow stats") || strings.Contains(lower, "dpi stats") || strings.Contains(lower, "flow counters") || strings.Contains(lower, "dpi-flow-stats") {
+			msg.Kind = KindDPIFlowStatsEvent
+		} else if strings.Contains(msg.Message, "dpi") || strings.Contains(msg.Message, "DPI") {
+			msg.Kind = KindDPIEvent
 		} else {
 			msg.Kind = KindUnclassified
 		}
@@ -153,6 +159,12 @@ func classifyOperational(msg *OperationalSyslogMessage) {
 		msg.Kind = KindDNSGatewayEvent
 	case "DPI", "dpi":
 		msg.Kind = KindDPIEvent
+	case "MCA", "mcad":
+		msg.Kind = KindMCAEvent
+	case "dpi-flow-stats":
+		msg.Kind = KindDPIFlowStatsEvent
+	case "systemd":
+		msg.Kind = KindSystemdEvent
 	default:
 		msg.Kind = KindUnclassified
 	}
@@ -201,6 +213,26 @@ func parseMessageContent(msg *OperationalSyslogMessage) {
 			msg.Fields["dpi_action"] = "failed"
 		} else {
 			msg.Fields["dpi_action"] = "lifecycle"
+		}
+	} else if msg.Kind == KindDPIFlowStatsEvent {
+		contentLower := strings.ToLower(content)
+		if strings.Contains(contentLower, "timeout") {
+			msg.Fields["dpi_action"] = "timeout"
+		} else if strings.Contains(contentLower, "failed") || strings.Contains(contentLower, "failure") {
+			msg.Fields["dpi_action"] = "failed"
+		} else {
+			msg.Fields["dpi_action"] = "lifecycle"
+		}
+	} else if msg.Kind == KindMCAEvent {
+		contentLower := strings.ToLower(content)
+		if strings.Contains(contentLower, "timeout") || strings.Contains(contentLower, "disconnected") || strings.Contains(contentLower, "unavailable") {
+			msg.Fields["mca_action"] = "timeout"
+		} else if strings.Contains(contentLower, "failed") || strings.Contains(contentLower, "failure") || strings.Contains(contentLower, "error") || strings.Contains(contentLower, "unable") {
+			msg.Fields["mca_action"] = "failure"
+		} else if strings.Contains(contentLower, "restart") || strings.Contains(contentLower, "adoption") {
+			msg.Fields["mca_action"] = "lifecycle"
+		} else {
+			msg.Fields["mca_action"] = "heartbeat"
 		}
 	} else if msg.Kind == KindGatewayHealthEvent {
 		contentLower := strings.ToLower(content)

@@ -341,6 +341,9 @@ func TestRunAllOperationalSamplesParsed(t *testing.T) {
 		"--input", filepath.Join(base, "earlyoom.log"),
 		"--input", filepath.Join(base, "syslog-ng.log"),
 		"--input", filepath.Join(base, "unclassified.log"),
+		"--input", filepath.Join(base, "mca.log"),
+		"--input", filepath.Join(base, "dpi-flow-stats.log"),
+		"--input", filepath.Join(base, "systemd.log"),
 	}
 	exitCode := run(args, strings.NewReader(""), &stdout, &stderr)
 	if exitCode != exitOK {
@@ -348,9 +351,69 @@ func TestRunAllOperationalSamplesParsed(t *testing.T) {
 	}
 	lines := decodeNDJSONRecords(t, stdout.String())
 	summary := lines[len(lines)-1].Summary
-	if summary.Parsed != 16 {
-		t.Fatalf("expected parsed=16 (2+4+3+3+2+2), got %+v", summary)
+	if summary.Parsed != 22 {
+		t.Fatalf("expected parsed=22 (2+4+3+3+2+2+2+2+2), got %+v", summary)
 	}
+}
+
+func TestRunMCASampleParsedAsOperational(t *testing.T) {
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	path := filepath.Join("..", "..", "..", "..", "packages", "contracts", "unifi", "samples", "operational", "mca.log")
+	exitCode := run([]string{"--input", path}, strings.NewReader(""), &stdout, &stderr)
+	if exitCode != exitOK {
+		t.Fatalf("expected exit 0, got %d stderr=%s", exitCode, stderr.String())
+	}
+	lines := decodeNDJSONRecords(t, stdout.String())
+	summary := lines[len(lines)-1].Summary
+	if summary.Parsed != 2 {
+		t.Fatalf("expected parsed=2, got %+v", summary)
+	}
+	if !containsEventType(lines, "system") {
+		t.Fatalf("expected event_type system in output")
+	}
+}
+
+func TestRunDPIFlowStatsSampleParsedAsOperational(t *testing.T) {
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	path := filepath.Join("..", "..", "..", "..", "packages", "contracts", "unifi", "samples", "operational", "dpi-flow-stats.log")
+	exitCode := run([]string{"--input", path}, strings.NewReader(""), &stdout, &stderr)
+	if exitCode != exitOK {
+		t.Fatalf("expected exit 0, got %d stderr=%s", exitCode, stderr.String())
+	}
+	lines := decodeNDJSONRecords(t, stdout.String())
+	summary := lines[len(lines)-1].Summary
+	if summary.Parsed != 2 {
+		t.Fatalf("expected parsed=2, got %+v", summary)
+	}
+	if !containsEventType(lines, "network_connection") {
+		t.Fatalf("expected event_type network_connection in output")
+	}
+}
+
+func TestRunSystemdSampleParsedAsOperational(t *testing.T) {
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	path := filepath.Join("..", "..", "..", "..", "packages", "contracts", "unifi", "samples", "operational", "systemd.log")
+	exitCode := run([]string{"--input", path}, strings.NewReader(""), &stdout, &stderr)
+	if exitCode != exitOK {
+		t.Fatalf("expected exit 0, got %d stderr=%s", exitCode, stderr.String())
+	}
+	lines := decodeNDJSONRecords(t, stdout.String())
+	summary := lines[len(lines)-1].Summary
+	if summary.Parsed != 2 {
+		t.Fatalf("expected parsed=2, got %+v", summary)
+	}
+}
+
+func containsEventType(records []outputRecord, target string) bool {
+	for _, r := range records {
+		if r.Normalized != nil && r.Normalized.EventType == target {
+			return true
+		}
+	}
+	return false
 }
 
 func TestRunCEFStillWorksAfterOperationalIntegration(t *testing.T) {

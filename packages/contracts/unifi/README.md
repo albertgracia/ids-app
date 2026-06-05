@@ -108,6 +108,9 @@ El subdirectorio `samples/operational/` contiene muestras sinteticas de logs ope
 | `earlyoom.log` | earlyoom (memory status) | gateway_health_event |
 | `syslog-ng.log` | syslog-ng (lifecycle) | syslog_operational_event |
 | `unclassified.log` | unknown-service | unclassified_unifi_syslog |
+| `mca.log` | MCA + mcad (device agent heartbeat/timeout) | mca_event |
+| `dpi-flow-stats.log` | dpi-flow-stats + ubios-udapi-server (flow stats/timeout) | dpi_flow_stats_event |
+| `systemd.log` | systemd (service lifecycle) | systemd_event |
 
 Los samples operacionales usan el formato de syslog enriquecido por rsyslog:
 

@@ -1,0 +1,2 @@
+Jun  5 12:07:00 OBS-HOST Cloud-Gateway-Fiber-Labraza dpi-flow-stats[8888]: flow stats batch exported successfully
+Jun  5 12:07:30 OBS-HOST Cloud-Gateway-Fiber-Labraza ubios-udapi-server[8889]: DPI flow stats timeout while updating counters

@@ -1,0 +1,2 @@
+Jun  5 12:08:00 OBS-HOST Cloud-Gateway-Fiber-Labraza systemd[1]: Started UniFi operational service
+Jun  5 12:08:30 OBS-HOST Cloud-Gateway-Fiber-Labraza systemd[1]: service restart completed
