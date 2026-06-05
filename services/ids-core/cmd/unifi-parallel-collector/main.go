@@ -14,6 +14,7 @@ import (
 	"strings"
 
 	"github.com/albertgracia/ids-app/services/ids-core/internal/domain"
+	"github.com/albertgracia/ids-app/services/ids-core/internal/ingest"
 	"github.com/albertgracia/ids-app/services/ids-core/internal/unifi"
 )
 
@@ -50,13 +51,21 @@ func (i *inputList) Set(value string) error {
 }
 
 type config struct {
-	inputs      inputList
-	useStdin    bool
-	output      string
-	mode        string
-	dedupe      bool
-	includeRaw  bool
-	operational bool
+	inputs              inputList
+	useStdin            bool
+	output              string
+	mode                string
+	dedupe              bool
+	includeRaw          bool
+	operational         bool
+	ingestBatch         bool
+	send                bool
+	endpoint            string
+	tokenEnv            string
+	collectorID         string
+	sourceHost          string
+	batchSize           int
+	printPayloadSummary bool
 }
 
 type lineInput struct {
@@ -179,6 +188,27 @@ func run(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 		return exitInvalidConfig
 	}
 
+	if cfg.ingestBatch {
+		batches, batchSummary, err := buildUniFiIngestBatches(cfg, records[:len(records)-1])
+		if err != nil {
+			fmt.Fprintf(stderr, "error: no se pudo construir batch ingest: %v\n", err)
+			return exitInvalidConfig
+		}
+		if cfg.printPayloadSummary {
+			printBatchSummary(stderr, batchSummary)
+		}
+		if cfg.send {
+			responses, err := sendUniFiIngestBatches(cfg, batches)
+			if err != nil {
+				fmt.Fprintf(stderr, "error: no se pudo enviar batch ingest: %v\n", err)
+				return exitInvalidConfig
+			}
+			if cfg.printPayloadSummary {
+				printSendSummary(stderr, responses)
+			}
+		}
+	}
+
 	if hadParseErrors {
 		return exitParseError
 	}
@@ -196,6 +226,14 @@ func parseConfig(args []string, stderr io.Writer) (config, int) {
 	fs.BoolVar(&cfg.dedupe, "dedupe", true, "Activar deduplicacion por raw_hash.")
 	fs.BoolVar(&cfg.includeRaw, "include-raw", false, "Incluir raw completo en la salida.")
 	fs.BoolVar(&cfg.operational, "operational", true, "Parser de syslog operacional UniFi como fallback.")
+	fs.BoolVar(&cfg.ingestBatch, "ingest-batch", false, "Construir batch compatible con ingest interno UniFi.")
+	fs.BoolVar(&cfg.send, "send", false, "Enviar batch por HTTP. Requiere endpoint local y token.")
+	fs.StringVar(&cfg.endpoint, "endpoint", "", "Endpoint destino para envio local del batch UniFi.")
+	fs.StringVar(&cfg.tokenEnv, "token-env", "IDS_UNIFI_INGEST_TOKEN", "Nombre de env var que contiene el Bearer token.")
+	fs.StringVar(&cfg.collectorID, "collector-id", "unifi-parallel-collector-local", "Identificador del collector para el batch UniFi.")
+	fs.StringVar(&cfg.sourceHost, "source-host", "unifi-gateway", "Source host sintetico para el batch UniFi.")
+	fs.IntVar(&cfg.batchSize, "batch-size", 50, "Tamano maximo de batch UniFi para dry-run local.")
+	fs.BoolVar(&cfg.printPayloadSummary, "print-payload-summary", true, "Imprimir resumen seguro del payload batch en stderr.")
 
 	if err := fs.Parse(args); err != nil {
 		return config{}, exitInvalidConfig
@@ -211,6 +249,24 @@ func parseConfig(args []string, stderr io.Writer) (config, int) {
 	if len(cfg.inputs) == 0 && !cfg.useStdin {
 		fmt.Fprintln(stderr, "error: debe indicar --input o --stdin")
 		return config{}, exitInvalidConfig
+	}
+	if cfg.batchSize < 1 || cfg.batchSize > ingest.MaxUniFiIngestBatchEvents {
+		fmt.Fprintf(stderr, "error: --batch-size debe estar entre 1 y %d\n", ingest.MaxUniFiIngestBatchEvents)
+		return config{}, exitInvalidConfig
+	}
+	if cfg.send && !cfg.ingestBatch {
+		fmt.Fprintln(stderr, "error: --send requiere --ingest-batch")
+		return config{}, exitInvalidConfig
+	}
+	if cfg.send && strings.TrimSpace(cfg.endpoint) == "" {
+		fmt.Fprintln(stderr, "error: --send requiere --endpoint")
+		return config{}, exitInvalidConfig
+	}
+	if cfg.send {
+		if err := validateLocalEndpoint(cfg.endpoint); err != nil {
+			fmt.Fprintf(stderr, "error: %v\n", err)
+			return config{}, exitInvalidConfig
+		}
 	}
 	return cfg, exitOK
 }

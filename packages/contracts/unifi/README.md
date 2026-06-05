@@ -90,6 +90,34 @@ Get-Content ..\..\packages\contracts\unifi\samples\ids-alert.cef | go run ./cmd/
 - `--dedupe=true`: deduplicacion in-memory por `raw_hash`.
 - `--include-raw=false`: no imprime el mensaje raw por defecto.
 
+## Collector batch dry-run
+
+El collector paralelo puede construir batches compatibles con el endpoint interno UniFi de `ids-core` sin enviar nada por defecto.
+
+### Flags de batch ingest
+
+- `--ingest-batch`: construye lotes compatibles con `POST /api/internal/v1/ingest/events/unifi`.
+- `--send=false`: valor por defecto. Nunca hace `POST` si no se activa explicitamente.
+- `--endpoint`: endpoint destino local, por ejemplo `http://127.0.0.1:8088/api/internal/v1/ingest/events/unifi`.
+- `--token-env=IDS_UNIFI_INGEST_TOKEN`: nombre de la env var para el Bearer token.
+- `--collector-id=unifi-parallel-collector-local`: identificador del collector en el payload.
+- `--source-host=unifi-gateway`: nombre de gateway/origen que se anuncia en el batch.
+- `--batch-size=50`: tamano maximo por lote. Maximo permitido `100`.
+- `--print-payload-summary=true`: imprime solo resumen seguro del lote y del envio por `stderr`.
+
+### Ejemplo local sin envio
+
+```powershell
+go run ./cmd/unifi-parallel-collector --input ..\..\packages\contracts\unifi\samples\operational\coredns.json.log --output json --ingest-batch --send=false --collector-id unifi-collector-local --source-host synthetic-gateway --print-payload-summary
+```
+
+### Restricciones de seguridad en fase local
+
+- no usar logs reales;
+- no enviar a `.40`;
+- el sender local rechaza endpoints no locales como `192.168.1.40` o `ids-observabilidad`;
+- no imprimir ni commitear tokens.
+
 ### Soporte de formatos
 
 - `CEF` puro: soportado.

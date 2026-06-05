@@ -513,6 +513,8 @@ Principios:
 - extender collector para construir payload batch
 - `--send=false` por defecto
 - `--print-payload-summary`
+- guardrail anti-`.40` / non-local endpoint
+- sender probado con `httptest`, no contra runtime real
 
 ### Fase 3
 
