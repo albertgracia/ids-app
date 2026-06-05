@@ -1,0 +1,3 @@
+Jun  5 12:02:00 OBS-HOST Cloud-Gateway-Fiber-Labraza odhcp6c[5397]: Failed to send SOLICIT message to ff02::1:2 (Cannot assign requested address)
+Jun  5 12:02:00 OBS-HOST Cloud-Gateway-Fiber-Labraza ubios-udapi-server[5397]: odhcp6c[5397]: Failed to send SOLICIT message to ff02::1:2 (Cannot assign requested address)
+Jun  5 12:03:00 OBS-HOST Cloud-Gateway-Fiber-Labraza odhcp6c[5397]: Failed to send RS (Cannot assign requested address)

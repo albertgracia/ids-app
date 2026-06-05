@@ -1,0 +1,4 @@
+Jun  5 12:01:00 OBS-HOST Cloud-Gateway-Fiber-Labraza ubios-udapi-server[2036]: [error] ubnt-dpi-util: connect: The socket was closed due to a timeout
+Jun  5 12:01:30 OBS-HOST Cloud-Gateway-Fiber-Labraza ubios-udapi-server[2036]: [warn ] ubnt-dpi-util: dpi ml request failed
+Jun  5 12:02:00 OBS-HOST Cloud-Gateway-Fiber-Labraza ubios-udapi-server[1082]: config-migrate-helper: Migrating config .example.com/dpi from 1 to 2
+Jun  5 12:02:05 OBS-HOST Cloud-Gateway-Fiber-Labraza ubios-udapi-server[1082]: svc-dpi-service:                +(services):    Keep running service dpi

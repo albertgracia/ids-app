@@ -1,0 +1,2 @@
+Jun  5 12:04:00 OBS-HOST Cloud-Gateway-Fiber-Labraza syslog-ng[6679]: syslog-ng starting up; version='4.7.0'
+Jun  5 12:05:00 OBS-HOST Cloud-Gateway-Fiber-Labraza syslog-ng[6679]: Reloading configuration; module_directory='/usr/lib/syslog-ng'

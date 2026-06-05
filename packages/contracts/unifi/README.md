@@ -96,6 +96,27 @@ Get-Content ..\..\packages\contracts\unifi\samples\ids-alert.cef | go run ./cmd/
 - `syslog` con `CEF` embebido: soportado por el collector paralelo.
 - `syslog` UniFi sin `CEF`: clasificado de forma segura como no soportado, sin falso positivo.
 
+## Samples de syslog operacional
+
+El subdirectorio `samples/operational/` contiene muestras sinteticas de logs operacionales UniFi, no derivadas de logs reales:
+
+| Archivo | Fuente simulada | Kind esperado |
+|---|---|---|
+| `coredns.json.log` | coredns (JSON dnsAdBlock) + unifi-mq-broker | dns_gateway_event |
+| `dpi.log` | ubios-udapi-server (DPI timeout/ML failure/lifecycle) | dpi_event |
+| `odhcp6c.log` | odhcp6c + ubios-udapi-server wrapping | dhcp_ipv6_event |
+| `earlyoom.log` | earlyoom (memory status) | gateway_health_event |
+| `syslog-ng.log` | syslog-ng (lifecycle) | syslog_operational_event |
+| `unclassified.log` | unknown-service | unclassified_unifi_syslog |
+
+Los samples operacionales usan el formato de syslog enriquecido por rsyslog:
+
+```
+Mon DD HH:MM:SS HOSTNAME HOSTNAME process[pid]: mensaje
+```
+
+Todos son sinteticos. No contienen datos reales, IPs reales, MACs reales ni dominios reales.
+
 ## Advertencias
 
 - Los archivos en `samples/` son sinteticos. No representan trafico real ni contienen secretos.
@@ -103,3 +124,4 @@ Get-Content ..\..\packages\contracts\unifi\samples\ids-alert.cef | go run ./cmd/
 - El parser actual cubre el subconjunto CEF usado por los samples; no sustituye una validacion con logs reales de UniFi.
 - El collector paralelo actual es solo local/dry-run; no conecta con `.30`, `.40`, Promtail, Loki ni Grafana.
 - Las muestras `syslog-embedded-*` y `syslog-unifi-no-cef.log` representan formas observadas de manera abstracta; no derivan directamente de logs reales commiteados.
+- Las muestras en `samples/operational/` representan patrones observados de forma agregada en la fase de mapping; no derivan directamente de logs reales.

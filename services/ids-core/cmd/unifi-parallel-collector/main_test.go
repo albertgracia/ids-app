@@ -250,6 +250,143 @@ func decodeNDJSONRecords(t *testing.T, output string) []outputRecord {
 	return records
 }
 
+func TestRunCoreDNSSampleParsedAsOperational(t *testing.T) {
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	path := filepath.Join("..", "..", "..", "..", "packages", "contracts", "unifi", "samples", "operational", "coredns.json.log")
+	exitCode := run([]string{"--input", path}, strings.NewReader(""), &stdout, &stderr)
+	if exitCode != exitOK {
+		t.Fatalf("expected exit 0, got %d stderr=%s", exitCode, stderr.String())
+	}
+	lines := decodeNDJSONRecords(t, stdout.String())
+	if lines[len(lines)-1].Summary.Parsed != 2 {
+		t.Fatalf("expected summary parsed=2 (coredns + broker), got %+v", lines[len(lines)-1].Summary)
+	}
+	if lines[0].Normalized == nil {
+		t.Fatalf("expected normalized output for first line")
+	}
+	if lines[0].Normalized.EventType != "dns_query" {
+		t.Fatalf("expected event_type dns_query, got %s", lines[0].Normalized.EventType)
+	}
+}
+
+func TestRunDPISampleParsedAsOperational(t *testing.T) {
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	path := filepath.Join("..", "..", "..", "..", "packages", "contracts", "unifi", "samples", "operational", "dpi.log")
+	exitCode := run([]string{"--input", path}, strings.NewReader(""), &stdout, &stderr)
+	if exitCode != exitOK {
+		t.Fatalf("expected exit 0, got %d stderr=%s", exitCode, stderr.String())
+	}
+	lines := decodeNDJSONRecords(t, stdout.String())
+	summary := lines[len(lines)-1].Summary
+	if summary.Parsed != 4 {
+		t.Fatalf("expected parsed=4, got %+v", summary)
+	}
+}
+
+func TestRunODHCP6CSampleParsedAsOperational(t *testing.T) {
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	path := filepath.Join("..", "..", "..", "..", "packages", "contracts", "unifi", "samples", "operational", "odhcp6c.log")
+	exitCode := run([]string{"--input", path}, strings.NewReader(""), &stdout, &stderr)
+	if exitCode != exitOK {
+		t.Fatalf("expected exit 0, got %d stderr=%s", exitCode, stderr.String())
+	}
+	lines := decodeNDJSONRecords(t, stdout.String())
+	summary := lines[len(lines)-1].Summary
+	if summary.Parsed != 3 {
+		t.Fatalf("expected parsed=3, got %+v", summary)
+	}
+}
+
+func TestRunEarlyoomSampleParsedAsOperational(t *testing.T) {
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	path := filepath.Join("..", "..", "..", "..", "packages", "contracts", "unifi", "samples", "operational", "earlyoom.log")
+	exitCode := run([]string{"--input", path}, strings.NewReader(""), &stdout, &stderr)
+	if exitCode != exitOK {
+		t.Fatalf("expected exit 0, got %d stderr=%s", exitCode, stderr.String())
+	}
+	lines := decodeNDJSONRecords(t, stdout.String())
+	summary := lines[len(lines)-1].Summary
+	if summary.Parsed != 3 {
+		t.Fatalf("expected parsed=3, got %+v", summary)
+	}
+}
+
+func TestRunSyslogNgSampleParsedAsOperational(t *testing.T) {
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	path := filepath.Join("..", "..", "..", "..", "packages", "contracts", "unifi", "samples", "operational", "syslog-ng.log")
+	exitCode := run([]string{"--input", path}, strings.NewReader(""), &stdout, &stderr)
+	if exitCode != exitOK {
+		t.Fatalf("expected exit 0, got %d stderr=%s", exitCode, stderr.String())
+	}
+	lines := decodeNDJSONRecords(t, stdout.String())
+	summary := lines[len(lines)-1].Summary
+	if summary.Parsed != 2 {
+		t.Fatalf("expected parsed=2, got %+v", summary)
+	}
+}
+
+func TestRunAllOperationalSamplesParsed(t *testing.T) {
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	base := filepath.Join("..", "..", "..", "..", "packages", "contracts", "unifi", "samples", "operational")
+	args := []string{
+		"--input", filepath.Join(base, "coredns.json.log"),
+		"--input", filepath.Join(base, "dpi.log"),
+		"--input", filepath.Join(base, "odhcp6c.log"),
+		"--input", filepath.Join(base, "earlyoom.log"),
+		"--input", filepath.Join(base, "syslog-ng.log"),
+		"--input", filepath.Join(base, "unclassified.log"),
+	}
+	exitCode := run(args, strings.NewReader(""), &stdout, &stderr)
+	if exitCode != exitOK {
+		t.Fatalf("expected exit 0, got %d stderr=%s", exitCode, stderr.String())
+	}
+	lines := decodeNDJSONRecords(t, stdout.String())
+	summary := lines[len(lines)-1].Summary
+	if summary.Parsed != 16 {
+		t.Fatalf("expected parsed=16 (2+4+3+3+2+2), got %+v", summary)
+	}
+}
+
+func TestRunCEFStillWorksAfterOperationalIntegration(t *testing.T) {
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	path := filepath.Join("..", "..", "..", "..", "packages", "contracts", "unifi", "samples", "ids-alert.cef")
+	exitCode := run([]string{"--input", path}, strings.NewReader(""), &stdout, &stderr)
+	if exitCode != exitOK {
+		t.Fatalf("expected exit 0, got %d stderr=%s", exitCode, stderr.String())
+	}
+	lines := decodeNDJSONRecords(t, stdout.String())
+	if lines[0].Normalized == nil || lines[0].Normalized.EventType != "threat_detected" {
+		t.Fatalf("expected threat_detected, got %+v", lines[0].Normalized)
+	}
+	if lines[len(lines)-1].Summary.Parsed != 1 {
+		t.Fatalf("expected parsed=1, got %+v", lines[len(lines)-1].Summary)
+	}
+}
+
+func TestRunSyslogEmbeddedCEFStillWorksAfterOperationalIntegration(t *testing.T) {
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	path := filepath.Join("..", "..", "..", "..", "packages", "contracts", "unifi", "samples", "syslog-embedded-cef-ids-alert.log")
+	exitCode := run([]string{"--input", path}, strings.NewReader(""), &stdout, &stderr)
+	if exitCode != exitOK {
+		t.Fatalf("expected exit 0, got %d stderr=%s", exitCode, stderr.String())
+	}
+	lines := decodeNDJSONRecords(t, stdout.String())
+	if lines[0].Normalized == nil || lines[0].Normalized.EventType != "threat_detected" {
+		t.Fatalf("expected threat_detected, got %+v", lines[0].Normalized)
+	}
+	if lines[len(lines)-1].Summary.Parsed != 1 {
+		t.Fatalf("expected parsed=1, got %+v", lines[len(lines)-1].Summary)
+	}
+}
+
 func contains(values []string, target string) bool {
 	for _, value := range values {
 		if value == target {

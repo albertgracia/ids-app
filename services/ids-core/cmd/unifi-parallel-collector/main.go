@@ -50,12 +50,13 @@ func (i *inputList) Set(value string) error {
 }
 
 type config struct {
-	inputs     inputList
-	useStdin   bool
-	output     string
-	mode       string
-	dedupe     bool
-	includeRaw bool
+	inputs      inputList
+	useStdin    bool
+	output      string
+	mode        string
+	dedupe      bool
+	includeRaw  bool
+	operational bool
 }
 
 type lineInput struct {
@@ -194,6 +195,7 @@ func parseConfig(args []string, stderr io.Writer) (config, int) {
 	fs.StringVar(&cfg.mode, "mode", modeDryRun, "Modo operativo. Solo se admite dry-run.")
 	fs.BoolVar(&cfg.dedupe, "dedupe", true, "Activar deduplicacion por raw_hash.")
 	fs.BoolVar(&cfg.includeRaw, "include-raw", false, "Incluir raw completo en la salida.")
+	fs.BoolVar(&cfg.operational, "operational", true, "Parser de syslog operacional UniFi como fallback.")
 
 	if err := fs.Parse(args); err != nil {
 		return config{}, exitInvalidConfig
@@ -302,13 +304,16 @@ func processLine(cfg config, entry lineInput, seen map[string]struct{}) result {
 	if err != nil {
 		switch {
 		case errors.Is(err, unifi.ErrUnsupportedUniFiSyslogNoCEF):
+			if cfg.operational {
+				if opRes := tryParseOperational(entry, cfg, rawHash, seen, record); opRes.record.ParseStatus != parseStatusError {
+					return opRes
+				}
+			}
 			record.ParseStatus = parseStatusSkipped
 			record.Warnings = append(record.Warnings, "unsupported_unifi_syslog_no_cef")
 			return result{record: record}
 		case errors.Is(err, unifi.ErrNoCEFEnvelope):
-			record.ParseStatus = parseStatusError
-			record.Error = "no CEF payload found"
-			return result{record: record, err: err}
+			return tryParseOperational(entry, cfg, rawHash, seen, record)
 		default:
 			record.ParseStatus = parseStatusError
 			record.Error = err.Error()
@@ -341,6 +346,46 @@ func processLine(cfg config, entry lineInput, seen map[string]struct{}) result {
 	}
 	domainCopy := projectDomain(event, normalized.EventType)
 	record.DomainEvent = &domainCopy
+
+	return result{record: record}
+}
+
+func tryParseOperational(entry lineInput, cfg config, rawHash string, seen map[string]struct{}, record outputRecord) result {
+	// Dedupe already checked by processLine before calling this function.
+
+	operational, parseErr := unifi.ParseOperationalSyslog(entry.Raw)
+	if parseErr != nil {
+		record.ParseStatus = parseStatusError
+		record.Error = "no CEF payload found"
+		return result{record: record, err: unifi.ErrNoCEFEnvelope}
+	}
+
+	if len(operational.Warnings) > 0 {
+		record.Warnings = append(record.Warnings, operational.Warnings...)
+	}
+
+	normalized := unifi.NormalizeOperational(operational)
+	normalized.RawMessageHash = rawHash
+	if normalized.Metadata == nil {
+		normalized.Metadata = make(map[string]string)
+	}
+	normalized.Metadata["unifi.raw_message_hash"] = rawHash
+
+	normalizedCopy := projectNormalized(normalized)
+	record.Normalized = &normalizedCopy
+
+	event, domainErr := normalized.ToDomainEvent()
+	if domainErr != nil {
+		record.ParseStatus = parseStatusError
+		record.Error = domainErr.Error()
+		return result{record: record, err: domainErr}
+	}
+	domainCopy := projectDomain(event, normalized.EventType)
+	record.DomainEvent = &domainCopy
+
+	if operational.Kind == unifi.KindUnclassified {
+		record.Warnings = append(record.Warnings, "unsupported_operational_format")
+	}
 
 	return result{record: record}
 }
