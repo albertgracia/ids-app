@@ -41,6 +41,8 @@ export interface PacketHeader {
   country: string
   city: string
   suricata?: SuricataInfo
+  eventTitle?: string
+  isUniFiEvent?: boolean
 }
 
 export interface Connection {

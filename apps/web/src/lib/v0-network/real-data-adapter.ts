@@ -339,6 +339,7 @@ export function toV0PacketItem(event: EventItem): PacketHeader | null {
     const dstIp = safeString(event.destination?.ip)
     const geoIp = isExternalIp(srcIp) ? lookupSyntheticGeoIp(srcIp) : isExternalIp(dstIp) ? lookupSyntheticGeoIp(dstIp) : null
     const suricataInfo = extractSuricataInfo(event)
+    const eventTitle = event.title || event.description || ""
     return {
       id: normalizeId(event.id),
       timestamp: safeTimestamp(event.timestamp),
@@ -354,6 +355,8 @@ export function toV0PacketItem(event: EventItem): PacketHeader | null {
       geolocation: geoIp ? { lat: geoIp.latitude, lng: geoIp.longitude, country: geoIp.countryName } : { lat: 0, lng: 0, country: "" },
       country: geoIp?.countryName || "",
       city: geoIp?.city || "",
+      eventTitle,
+      isUniFiEvent: !srcIp && !dstIp,
       ...(suricataInfo ? { suricata: suricataInfo } : {}),
     }
   } catch {

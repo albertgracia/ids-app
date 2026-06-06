@@ -3,6 +3,7 @@
 import { useMemo } from "react"
 import type { PacketHeader, TrafficStats } from "@/lib/v0-network/mock-data"
 import { formatBytes } from "@/lib/v0-network/mock-data"
+import type { EventStats } from "@/lib/types"
 import {
   buildV0TopSources,
   buildV0TopPorts,
@@ -15,15 +16,18 @@ import {
   severityToLabelEs,
   SEVERITY_ORDER,
 } from "@/lib/v0-network/real-data-adapter"
-import { Shield, Globe, Cpu, HardDrive, AlertTriangle } from "lucide-react"
+import { Shield, Globe, Cpu, HardDrive, AlertTriangle, List, Clock } from "lucide-react"
 
 interface AdvancedStatsDashboardProps {
   packets: PacketHeader[]
   stats: TrafficStats
   severityById?: Record<string, SeverityLevel>
+  eventStats?: EventStats | null
 }
 
-export function AdvancedStatsDashboard({ packets, stats, severityById }: AdvancedStatsDashboardProps) {
+export function AdvancedStatsDashboard({ packets, stats, severityById, eventStats }: AdvancedStatsDashboardProps) {
+  const isEventMode = !!(eventStats && eventStats.total_events > 0 && eventStats.source_counts && Object.keys(eventStats.source_counts).length === 0)
+
   const advancedMetrics = useMemo(() => {
     const trafficMetrics = buildV0TrafficMetrics(packets)
     const topSources = buildV0TopSources(packets)
@@ -46,6 +50,8 @@ export function AdvancedStatsDashboard({ packets, stats, severityById }: Advance
     return { ...trafficMetrics, topSources, topPorts, protocolHealth, healthScore, severitySummary }
   }, [packets, stats.suspiciousCount, severityById])
 
+  const hasTrafficData = advancedMetrics.uniqueSourceIps > 0 || advancedMetrics.topSources.length > 0
+
   const getHealthColor = (score: number) => {
     if (score >= 80) return "#22c55e"
     if (score >= 60) return "#eab308"
@@ -65,153 +71,256 @@ export function AdvancedStatsDashboard({ packets, stats, severityById }: Advance
     502: "Modbus", 8080: "HTTP", 8443: "HTTPS", 3389: "RDP",
   }
 
-  const totalCount = Math.max(packets.length, 1)
+  const totalCount = Math.max(eventStats ? eventStats.total_events : packets.length, 1)
+
+  const eventTypeEntries = eventStats?.event_type_counts
+    ? Object.entries(eventStats.event_type_counts).sort(([, a], [, b]) => b - a)
+    : []
+
+  const severityFromStats = eventStats?.severity_counts
+    ? Object.entries(eventStats.severity_counts).sort(([, a], [, b]) => b - a)
+    : []
+
+  const eventColorMap: Record<string, string> = {
+    network_connection: "#3b82f6",
+    system: "#a855f7",
+    unclassified_event: "#9ca3af",
+    dns_query: "#f97316",
+    authentication: "#22c55e",
+    anomaly: "#ef4444",
+    alert: "#eab308",
+  }
 
   return (
     <div className="v0-advanced-stats">
       <div className="v0-adv-grid">
-        {/* Health Score */}
-        <div className="v0-adv-card">
-          <div className="v0-adv-card-header">
-            <Shield size={16} color={getHealthColor(advancedMetrics.healthScore)} />
-            <span>Puntuación de Salud de Red</span>
-          </div>
-          <div className="v0-adv-card-body">
-            <div className="v0-health-score-wrap">
-              <span className="v0-health-score" style={{ color: getHealthColor(advancedMetrics.healthScore) }}>
-                {advancedMetrics.healthScore}
-              </span>
-              <span className="v0-health-label" style={{ color: getHealthColor(advancedMetrics.healthScore) }}>
-                {getHealthLabel(advancedMetrics.healthScore)}
-              </span>
+        {/* Health Score (only in traffic mode) */}
+        {!isEventMode && (
+          <div className="v0-adv-card">
+            <div className="v0-adv-card-header">
+              <Shield size={16} color={getHealthColor(advancedMetrics.healthScore)} />
+              <span>Puntuación de Salud de Red</span>
             </div>
-            <div className="v0-progress-bar-wrap">
-              <div className="v0-progress-bar">
-                <div className="v0-progress-fill" style={{ width: `${advancedMetrics.healthScore}%`, background: getHealthColor(advancedMetrics.healthScore) }} />
+            <div className="v0-adv-card-body">
+              <div className="v0-health-score-wrap">
+                <span className="v0-health-score" style={{ color: getHealthColor(advancedMetrics.healthScore) }}>
+                  {advancedMetrics.healthScore}
+                </span>
+                <span className="v0-health-label" style={{ color: getHealthColor(advancedMetrics.healthScore) }}>
+                  {getHealthLabel(advancedMetrics.healthScore)}
+                </span>
+              </div>
+              <div className="v0-progress-bar-wrap">
+                <div className="v0-progress-bar">
+                  <div className="v0-progress-fill" style={{ width: `${advancedMetrics.healthScore}%`, background: getHealthColor(advancedMetrics.healthScore) }} />
+                </div>
+              </div>
+              <div className="v0-adv-muted">
+                Basado en {stats.suspiciousCount} eventos sospechosos y {advancedMetrics.uniqueSourceIps} fuentes únicas
               </div>
             </div>
-            <div className="v0-adv-muted">
-              Basado en {stats.suspiciousCount} paquetes sospechosos y {advancedMetrics.uniqueSourceIps} fuentes únicas
-            </div>
           </div>
-        </div>
+        )}
 
-        {/* Top Sources */}
-        <div className="v0-adv-card">
-          <div className="v0-adv-card-header">
-            <Globe size={16} color="#06b6d4" />
-            <span>Principales Orígenes</span>
-          </div>
-          <div className="v0-adv-card-body">
-            <div className="v0-adv-list">
-              {advancedMetrics.topSources.map(([ip, count], idx) => {
-                const pct = (count / totalCount) * 100
-                return (
-                  <div key={ip} className="v0-adv-list-row">
-                    <span className="v0-adv-rank">{idx + 1}</span>
-                    <span className="v0-adv-ip">{ip}</span>
-                    <div className="v0-adv-bar-wrap">
-                      <div className="v0-adv-bar" style={{ width: `${pct}%` }} />
+        {/* Event Type Distribution (event mode) */}
+        {isEventMode && eventTypeEntries.length > 0 && (
+          <div className="v0-adv-card" style={{ gridColumn: "span 2" }}>
+            <div className="v0-adv-card-header">
+              <List size={16} color="#3b82f6" />
+              <span>Tipos de Evento</span>
+            </div>
+            <div className="v0-adv-card-body">
+              <div className="v0-adv-list">
+                {eventTypeEntries.map(([type, count], idx) => {
+                  const pct = (count / totalCount) * 100
+                  return (
+                    <div key={type} className="v0-adv-list-row">
+                      <span className="v0-adv-rank">{idx + 1}</span>
+                      <span className="v0-adv-ip" style={{ color: eventColorMap[type] || "#9ca3af" }}>{type}</span>
+                      <div className="v0-adv-bar-wrap">
+                        <div className="v0-adv-bar" style={{ width: `${pct}%`, background: eventColorMap[type] || "#9ca3af" }} />
+                      </div>
+                      <span className="v0-adv-count">{count} ({pct.toFixed(1)}%)</span>
                     </div>
-                    <span className="v0-adv-count">{count} paq.</span>
-                    <span className="v0-adv-trend" style={{ color: pct > 15 ? "#22c55e" : "#f97316" }}>{pct > 15 ? "↑" : "↓"}</span>
-                  </div>
-                )
-              })}
-              {advancedMetrics.topSources.length === 0 && <div className="v0-adv-empty">Sin datos</div>}
+                  )
+                })}
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
-        {/* Top Destination Ports */}
-        <div className="v0-adv-card">
-          <div className="v0-adv-card-header">
-            <Cpu size={16} color="#a855f7" />
-            <span>Puertos de Destino</span>
-          </div>
-          <div className="v0-adv-card-body">
-            <div className="v0-adv-list">
-              {advancedMetrics.topPorts.map(([port, count], idx) => {
-                const pct = (count / totalCount) * 100
-                const portNum = Number(port)
-                return (
-                  <div key={port} className="v0-adv-list-row">
-                    <span className="v0-adv-rank">{idx + 1}</span>
-                    <span className="v0-adv-port">{port}</span>
-                    <span className="v0-adv-port-label">{PORT_LABELS[portNum] || ""}</span>
-                    <div className="v0-adv-bar-wrap">
-                      <div className="v0-adv-bar v0-adv-bar-purple" style={{ width: `${pct}%` }} />
-                    </div>
-                    <span className="v0-adv-count">{count} paq.</span>
-                  </div>
-                )
-              })}
-              {advancedMetrics.topPorts.length === 0 && <div className="v0-adv-empty">Sin datos</div>}
+        {/* Last Event (event mode) */}
+        {isEventMode && eventStats?.last_event_at && (
+          <div className="v0-adv-card">
+            <div className="v0-adv-card-header">
+              <Clock size={16} color="#22c55e" />
+              <span>Último Evento</span>
+            </div>
+            <div className="v0-adv-card-body">
+              <div className="v0-health-score-wrap">
+                <span className="v0-health-score" style={{ fontSize: "14px", color: "#22c55e" }}>
+                  {new Date(eventStats.last_event_at).toLocaleTimeString("es-ES")}
+                </span>
+                <span className="v0-health-label" style={{ color: "rgba(255,255,255,0.5)" }}>
+                  {new Date(eventStats.last_event_at).toLocaleDateString("es-ES")}
+                </span>
+              </div>
+              <div className="v0-adv-muted">
+                Ventana de {eventStats.window_seconds}s · {eventStats.events_per_minute.toFixed(1)} eventos/min
+              </div>
             </div>
           </div>
-        </div>
+        )}
+
+        {/* Severity Distribution (event mode) */}
+        {isEventMode && severityFromStats.length > 0 && (
+          <div className="v0-adv-card">
+            <div className="v0-adv-card-header">
+              <AlertTriangle size={16} color="#eab308" />
+              <span>Severidad</span>
+            </div>
+            <div className="v0-adv-card-body">
+              <div className="v0-adv-list">
+                {severityFromStats.map(([sev, count]) => {
+                  const pct = (count / totalCount) * 100
+                  const color = severityToColor(sev as SeverityLevel)
+                  return (
+                    <div key={sev} className="v0-adv-list-row">
+                      <span className="v0-adv-ip" style={{ color, fontSize: "12px" }}>{severityToLabelEs(sev as SeverityLevel)}</span>
+                      <div className="v0-adv-bar-wrap">
+                        <div className="v0-adv-bar" style={{ width: `${pct}%`, background: color }} />
+                      </div>
+                      <span className="v0-adv-count">{count}</span>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Top Sources (traffic mode only) */}
+        {!isEventMode && hasTrafficData && (
+          <div className="v0-adv-card">
+            <div className="v0-adv-card-header">
+              <Globe size={16} color="#06b6d4" />
+              <span>Principales Orígenes</span>
+            </div>
+            <div className="v0-adv-card-body">
+              <div className="v0-adv-list">
+                {advancedMetrics.topSources.map(([ip, count], idx) => {
+                  const pct = (count / totalCount) * 100
+                  return (
+                    <div key={ip} className="v0-adv-list-row">
+                      <span className="v0-adv-rank">{idx + 1}</span>
+                      <span className="v0-adv-ip">{ip}</span>
+                      <div className="v0-adv-bar-wrap">
+                        <div className="v0-adv-bar" style={{ width: `${pct}%` }} />
+                      </div>
+                      <span className="v0-adv-count">{count} ev.</span>
+                      <span className="v0-adv-trend" style={{ color: pct > 15 ? "#22c55e" : "#f97316" }}>{pct > 15 ? "↑" : "↓"}</span>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Top Destination Ports (traffic mode only) */}
+        {!isEventMode && hasTrafficData && (
+          <div className="v0-adv-card">
+            <div className="v0-adv-card-header">
+              <Cpu size={16} color="#a855f7" />
+              <span>Puertos de Destino</span>
+            </div>
+            <div className="v0-adv-card-body">
+              <div className="v0-adv-list">
+                {advancedMetrics.topPorts.map(([port, count], idx) => {
+                  const pct = (count / totalCount) * 100
+                  const portNum = Number(port)
+                  return (
+                    <div key={port} className="v0-adv-list-row">
+                      <span className="v0-adv-rank">{idx + 1}</span>
+                      <span className="v0-adv-port">{port}</span>
+                      <span className="v0-adv-port-label">{PORT_LABELS[portNum] || ""}</span>
+                      <div className="v0-adv-bar-wrap">
+                        <div className="v0-adv-bar v0-adv-bar-purple" style={{ width: `${pct}%` }} />
+                      </div>
+                      <span className="v0-adv-count">{count} ev.</span>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Traffic Metrics */}
-        <div className="v0-adv-card">
-          <div className="v0-adv-card-header">
-            <HardDrive size={16} color="#f97316" />
-            <span>Métricas de Tráfico</span>
-          </div>
-          <div className="v0-adv-card-body">
-            <div className="v0-metrics-grid">
-              <div className="v0-metric-item">
-                <span className="v0-metric-value">{advancedMetrics.uniqueSourceIps}</span>
-                <span className="v0-metric-label">Fuentes únicas</span>
-              </div>
-              <div className="v0-metric-item">
-                <span className="v0-metric-value">{advancedMetrics.uniqueDestIps}</span>
-                <span className="v0-metric-label">Destinos únicos</span>
-              </div>
-              <div className="v0-metric-item">
-                <span className="v0-metric-value">{advancedMetrics.uniquePorts}</span>
-                <span className="v0-metric-label">Puertos únicos</span>
-              </div>
-              <div className="v0-metric-item">
-                <span className="v0-metric-value">{formatBytes(advancedMetrics.avgPacketSize)}</span>
-                <span className="v0-metric-label">Tamaño medio</span>
+        {!isEventMode && (
+          <div className="v0-adv-card">
+            <div className="v0-adv-card-header">
+              <HardDrive size={16} color="#f97316" />
+              <span>Métricas de Tráfico</span>
+            </div>
+            <div className="v0-adv-card-body">
+              <div className="v0-metrics-grid">
+                <div className="v0-metric-item">
+                  <span className="v0-metric-value">{advancedMetrics.uniqueSourceIps}</span>
+                  <span className="v0-metric-label">Fuentes únicas</span>
+                </div>
+                <div className="v0-metric-item">
+                  <span className="v0-metric-value">{advancedMetrics.uniqueDestIps}</span>
+                  <span className="v0-metric-label">Destinos únicos</span>
+                </div>
+                <div className="v0-metric-item">
+                  <span className="v0-metric-value">{advancedMetrics.uniquePorts}</span>
+                  <span className="v0-metric-label">Puertos únicos</span>
+                </div>
+                <div className="v0-metric-item">
+                  <span className="v0-metric-value">{formatBytes(advancedMetrics.avgPacketSize)}</span>
+                  <span className="v0-metric-label">Tamaño medio</span>
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        )}
       </div>
 
-      {/* Protocol Distribution horizontal */}
-      <div className="v0-adv-card v0-adv-protocol-dist">
-        <div className="v0-adv-card-header">
-          <span>Distribución de Protocolos</span>
-        </div>
-        <div className="v0-adv-card-body">
-          <div className="v0-adv-protocol-list">
-            {Object.entries(advancedMetrics.protocolHealth).map(([protocol, count]) => {
-              const pct = (count / totalCount) * 100
-              const colorMap: Record<string, string> = {
-                TCP: "#3b82f6", UDP: "#a855f7", HTTP: "#22c55e",
-                HTTPS: "#10b981", DNS: "#f97316", ICMP: "#06b6d4",
-                SSH: "#ec4899", FTP: "#eab308",
-              }
-              return (
-                <div key={protocol} className="v0-adv-protocol-row">
-                  <div className="v0-adv-protocol-header">
-                    <span className="v0-adv-protocol-name">{protocol}</span>
-                    <span className="v0-adv-protocol-count">{count} ({pct.toFixed(1)}%)</span>
+      {/* Protocol Distribution (traffic mode only) */}
+      {!isEventMode && (
+        <div className="v0-adv-card v0-adv-protocol-dist">
+          <div className="v0-adv-card-header">
+            <span>Distribución de Protocolos</span>
+          </div>
+          <div className="v0-adv-card-body">
+            <div className="v0-adv-protocol-list">
+              {Object.entries(advancedMetrics.protocolHealth).map(([protocol, count]) => {
+                const pct = (count / totalCount) * 100
+                const colorMap: Record<string, string> = {
+                  TCP: "#3b82f6", UDP: "#a855f7", HTTP: "#22c55e",
+                  HTTPS: "#10b981", DNS: "#f97316", ICMP: "#06b6d4",
+                  SSH: "#ec4899", FTP: "#eab308",
+                }
+                return (
+                  <div key={protocol} className="v0-adv-protocol-row">
+                    <div className="v0-adv-protocol-header">
+                      <span className="v0-adv-protocol-name">{protocol}</span>
+                      <span className="v0-adv-protocol-count">{count} ({pct.toFixed(1)}%)</span>
+                    </div>
+                    <div className="v0-progress-bar">
+                      <div className="v0-progress-fill" style={{ width: `${pct}%`, background: colorMap[protocol] || "#9ca3af" }} />
+                    </div>
                   </div>
-                  <div className="v0-progress-bar">
-                    <div className="v0-progress-fill" style={{ width: `${pct}%`, background: colorMap[protocol] || "#9ca3af" }} />
-                  </div>
-                </div>
-              )
-            })}
+                )
+              })}
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
-      {/* Severity Distribution */}
-      {advancedMetrics.severitySummary && (
+      {/* Severity Distribution (traffic mode) */}
+      {!isEventMode && advancedMetrics.severitySummary && (
         <div className="v0-adv-card v0-adv-protocol-dist">
           <div className="v0-adv-card-header">
             <AlertTriangle size={16} color="#eab308" />

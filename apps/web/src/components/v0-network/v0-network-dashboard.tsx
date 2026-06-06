@@ -201,21 +201,23 @@ export default function V0NetworkDashboard() {
 
         <StatsOverview stats={realStats} eventStats={eventStats.stats} />
 
-        <div className="v0-grid-4">
-          <div style={{ display: "flex", justifyContent: "center" }}>
-            <BandwidthMeter label="Descarga" value={realStats.bytesPerSecond} max={maxBandwidth} color="#3b82f6" />
+        {(!eventStats.stats || realStats.bytesPerSecond > 0) && (
+          <div className="v0-grid-4">
+            <div style={{ display: "flex", justifyContent: "center" }}>
+              <BandwidthMeter label="Descarga" value={realStats.bytesPerSecond} max={maxBandwidth} color="#3b82f6" />
+            </div>
+            <div style={{ display: "flex", justifyContent: "center" }}>
+              <BandwidthMeter label="Subida" value={realStats.bytesPerSecond * 0.4} max={maxBandwidth} color="#22c55e" />
+            </div>
+            <div style={{ gridColumn: "span 2" }}>
+              <ProtocolFilters
+                activeFilters={activeFilters}
+                onToggleFilter={toggleFilter}
+                onClearFilters={clearFilters}
+              />
+            </div>
           </div>
-          <div style={{ display: "flex", justifyContent: "center" }}>
-            <BandwidthMeter label="Subida" value={realStats.bytesPerSecond * 0.4} max={maxBandwidth} color="#22c55e" />
-          </div>
-          <div style={{ gridColumn: "span 2" }}>
-            <ProtocolFilters
-              activeFilters={activeFilters}
-              onToggleFilter={toggleFilter}
-              onClearFilters={clearFilters}
-            />
-          </div>
-        </div>
+        )}
 
         {replay.isReplayMode && (
           <ReplayControls
@@ -267,9 +269,9 @@ export default function V0NetworkDashboard() {
                   classifications={assetClassifications.classifications}
                   apiAvailable={assetClassifications.apiAvailable}
                 />
-                <AdvancedStatsDashboard packets={activePackets} stats={realStats} severityById={severityById} />
-                <TrafficHeatmap packets={activePackets} />
+                <AdvancedStatsDashboard packets={activePackets} stats={realStats} severityById={severityById} eventStats={eventStats.stats} />
                 <StatisticsChart packets={activePackets} />
+                {(!eventStats.stats || Object.keys(eventStats.stats.source_counts).length > 0) && <TrafficHeatmap packets={activePackets} />}
               </div>
             )}
 
@@ -285,15 +287,28 @@ export default function V0NetworkDashboard() {
 
             {activeTab === "map" && (
               <div className="v0-space-16">
-                <TrafficMap packets={activePackets} />
-                <LocationCards packets={activePackets} />
-                <div style={{
-                  textAlign: "center", fontSize: "10px", color: "rgba(255,255,255,0.3)",
-                  padding: "6px 0", fontFamily: "monospace", lineHeight: 1.6,
-                }}>
-                  <div>GeoIP sintético local — no se consulta ningún proveedor externo</div>
-                  <div>No se geolocalizan IPs privadas · Fuente: {buildV0MapSourceLabel(activePackets, hasRealData)} · {buildV0ExternalCount(activePackets)} IPs externas</div>
-                </div>
+                {buildV0ExternalCount(activePackets) > 0 ? (
+                  <>
+                    <TrafficMap packets={activePackets} />
+                    <LocationCards packets={activePackets} />
+                    <div style={{
+                      textAlign: "center", fontSize: "10px", color: "rgba(255,255,255,0.3)",
+                      padding: "6px 0", fontFamily: "monospace", lineHeight: 1.6,
+                    }}>
+                      <div>GeoIP sintético local — no se consulta ningún proveedor externo</div>
+                      <div>No se geolocalizan IPs privadas · Fuente: {buildV0MapSourceLabel(activePackets, hasRealData)} · {buildV0ExternalCount(activePackets)} IPs externas</div>
+                    </div>
+                  </>
+                ) : (
+                  <div className="v0-card" style={{ padding: "40px", textAlign: "center" }}>
+                    <p style={{ color: "rgba(255,255,255,0.4)", fontSize: "13px", fontFamily: "monospace" }}>
+                      No hay datos de geolocalización disponibles para los eventos actuales.
+                    </p>
+                    <p style={{ color: "rgba(255,255,255,0.25)", fontSize: "11px", marginTop: "8px" }}>
+                      Los eventos UniFi no incluyen direcciones IP externas para geolocalización.
+                    </p>
+                  </div>
+                )}
               </div>
             )}
           </div>

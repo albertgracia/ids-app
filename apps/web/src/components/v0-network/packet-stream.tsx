@@ -8,7 +8,7 @@ import { SuricataBadge } from "./suricata-badge"
 import { PacketDetailModal } from "./packet-detail-modal"
 import { formatTimestamp, formatBytes, type PacketHeader } from "@/lib/v0-network/mock-data"
 import type { AssetInfo, AssetType, SeverityLevel } from "@/lib/v0-network/real-data-adapter"
-import { AlertTriangle, Maximize2, Minimize2 } from "lucide-react"
+import { AlertTriangle, Maximize2, Minimize2, Info } from "lucide-react"
 
 interface PacketStreamProps {
   packets: PacketHeader[]
@@ -83,27 +83,40 @@ export function PacketStream({ packets, maxHeight = 600, assetByIp, severityById
                       {(() => { const at = getAssetType(packet.destIp); return at ? <AssetBadge assetType={at} /> : null })()}
                       {packet.suricata && <SuricataBadge eventType={packet.suricata.eventType} />}
                     </div>
-                  <span className="v0-mono-xs-dim">{formatBytes(packet.size)}</span>
+                  {!packet.isUniFiEvent && <span className="v0-mono-xs-dim">{formatBytes(packet.size)}</span>}
                 </div>
-                <div className="v0-packet-exp-body">
-                  <div>
-                    <span className="v0-mono-label">Origen</span>
-                    <div className="v0-ip-row">
-                      <span style={{ color: "#06b6d4" }}>{packet.sourceIp}</span>
-                      <span style={{ color: "rgba(255,255,255,0.4)" }}>:</span>
-                      <span>{packet.sourcePort}</span>
-                    </div>
-                    {packet.city && <span className="v0-mono-xs-dim">{packet.city}, {packet.country}</span>}
-                  </div>
-                  <div>
-                    <span className="v0-mono-label">Destino</span>
-                    <div className="v0-ip-row">
-                      <span style={{ color: "#06b6d4" }}>{packet.destIp}</span>
-                      <span style={{ color: "rgba(255,255,255,0.4)" }}>:</span>
-                      <span>{packet.destPort}</span>
+                {packet.isUniFiEvent && packet.eventTitle ? (
+                  <div className="v0-packet-exp-body">
+                    <div style={{ display: "flex", alignItems: "flex-start", gap: "6px" }}>
+                      <Info size={14} color="#3b82f6" style={{ marginTop: "2px", flexShrink: 0 }} />
+                      <span className="v0-mono-xs" style={{ color: "rgba(255,255,255,0.8)", lineHeight: 1.5 }}>
+                        {packet.eventTitle.length > 160
+                          ? packet.eventTitle.slice(0, 160) + "…"
+                          : packet.eventTitle}
+                      </span>
                     </div>
                   </div>
-                </div>
+                ) : (
+                  <div className="v0-packet-exp-body">
+                    <div>
+                      <span className="v0-mono-label">Origen</span>
+                      <div className="v0-ip-row">
+                        <span style={{ color: "#06b6d4" }}>{packet.sourceIp}</span>
+                        <span style={{ color: "rgba(255,255,255,0.4)" }}>:</span>
+                        <span>{packet.sourcePort}</span>
+                      </div>
+                      {packet.city && <span className="v0-mono-xs-dim">{packet.city}, {packet.country}</span>}
+                    </div>
+                    <div>
+                      <span className="v0-mono-label">Destino</span>
+                      <div className="v0-ip-row">
+                        <span style={{ color: "#06b6d4" }}>{packet.destIp}</span>
+                        <span style={{ color: "rgba(255,255,255,0.4)" }}>:</span>
+                        <span>{packet.destPort}</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
                 {packet.suricata && packet.suricata.signature && (
                   <div style={{ marginTop: "6px", fontSize: "11px", fontFamily: "monospace", color: "rgba(255,255,255,0.7)" }}>
                     <span style={{ color: "#a855f7" }}>EVE:</span>{" "}
@@ -127,24 +140,30 @@ export function PacketStream({ packets, maxHeight = 600, assetByIp, severityById
                 className={`v0-packet-row ${packet.isSuspicious ? "v0-packet-suspicious" : ""}`}
                 onClick={() => handleClick(packet)}
               >
-                  <div style={{ display: "flex", alignItems: "center", gap: "4px", flex: 1, minWidth: 0 }}>
-                    <SeverityBadge severity={getSeverity(packet)} />
-                    {packet.isSuspicious && <AlertTriangle size={12} color="#ef4444" style={{ flexShrink: 0 }} />}
-                    <span className="v0-mono-xs-dim" style={{ whiteSpace: "nowrap" }}>{formatTimestamp(packet.timestamp)}</span>
-                    <ProtocolBadge protocol={packet.protocol} />
-                    {(() => { const at = getAssetType(packet.destIp); return at ? <AssetBadge assetType={at} /> : null })()}
-                    {packet.suricata && <SuricataBadge eventType={packet.suricata.eventType} />}
-                  <div style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "12px", fontFamily: "monospace", overflow: "hidden" }}>
-                    <span style={{ color: "#06b6d4" }}>{packet.sourceIp}</span>
-                    <span style={{ color: "rgba(255,255,255,0.4)" }}>:</span>
-                    <span>{packet.sourcePort}</span>
-                    <span style={{ color: "rgba(255,255,255,0.4)" }}>→</span>
-                    <span style={{ color: "#06b6d4" }}>{packet.destIp}</span>
-                    <span style={{ color: "rgba(255,255,255,0.4)" }}>:</span>
-                    <span>{packet.destPort}</span>
-                  </div>
+                <div style={{ display: "flex", alignItems: "center", gap: "4px", flex: 1, minWidth: 0 }}>
+                  <SeverityBadge severity={getSeverity(packet)} />
+                  {packet.isSuspicious && <AlertTriangle size={12} color="#ef4444" style={{ flexShrink: 0 }} />}
+                  <span className="v0-mono-xs-dim" style={{ whiteSpace: "nowrap" }}>{formatTimestamp(packet.timestamp)}</span>
+                  <ProtocolBadge protocol={packet.protocol} />
+                  {(() => { const at = getAssetType(packet.destIp); return at ? <AssetBadge assetType={at} /> : null })()}
+                  {packet.suricata && <SuricataBadge eventType={packet.suricata.eventType} />}
+                  {packet.isUniFiEvent && packet.eventTitle ? (
+                    <span className="v0-mono-xs-dim" style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "300px", color: "rgba(255,255,255,0.6)" }}>
+                      {packet.eventTitle.length > 60 ? packet.eventTitle.slice(0, 60) + "…" : packet.eventTitle}
+                    </span>
+                  ) : (
+                    <div style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "12px", fontFamily: "monospace", overflow: "hidden" }}>
+                      <span style={{ color: "#06b6d4" }}>{packet.sourceIp}</span>
+                      <span style={{ color: "rgba(255,255,255,0.4)" }}>:</span>
+                      <span>{packet.sourcePort}</span>
+                      <span style={{ color: "rgba(255,255,255,0.4)" }}>→</span>
+                      <span style={{ color: "#06b6d4" }}>{packet.destIp}</span>
+                      <span style={{ color: "rgba(255,255,255,0.4)" }}>:</span>
+                      <span>{packet.destPort}</span>
+                    </div>
+                  )}
                 </div>
-                <span className="v0-mono-xs-dim" style={{ whiteSpace: "nowrap" }}>{packet.size} bytes</span>
+                {!packet.isUniFiEvent && <span className="v0-mono-xs-dim" style={{ whiteSpace: "nowrap" }}>{packet.size} bytes</span>}
                 {packet.suricata && packet.suricata.signature && (
                   <span className="v0-mono-xs-dim" style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "200px", color: "rgba(255,255,255,0.4)" }}>
                     {packet.suricata.signature.length > 40
