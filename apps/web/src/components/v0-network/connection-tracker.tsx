@@ -10,13 +10,35 @@ import type { EnrichedConnection } from "@/lib/v0-network/real-data-adapter"
 interface ConnectionTrackerProps {
   connections: EnrichedConnection[]
   assetByIp?: Record<string, AssetInfo>
+  isEventMode?: boolean
 }
 
-export function ConnectionTracker({ connections, assetByIp }: ConnectionTrackerProps) {
+export function ConnectionTracker({ connections, assetByIp, isEventMode }: ConnectionTrackerProps) {
 
   function getAssetType(ip: string): AssetType | undefined {
     return assetByIp?.[ip]?.assetType
   }
+
+  if (isEventMode) {
+    return (
+      <div className="v0-card">
+        <div className="v0-conn-header">
+          <h3 className="v0-card-title">Conexiones</h3>
+        </div>
+        <div className="v0-conn-list">
+          <div style={{ padding: "24px", textAlign: "center" }}>
+            <p style={{ color: "rgba(255,255,255,0.5)", fontSize: "13px", fontFamily: "monospace", lineHeight: 1.6 }}>
+              Los eventos UniFi actuales no incluyen conexiones IP completas con origen, destino y puertos.
+            </p>
+            <p style={{ color: "rgba(255,255,255,0.3)", fontSize: "12px", fontFamily: "monospace", marginTop: "8px" }}>
+              Las conexiones L3/L4 estarán disponibles cuando se reciban eventos con direcciones IP (Suricata EVE, tráfico de red directo).
+            </p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="v0-card">
       <div className="v0-conn-header">

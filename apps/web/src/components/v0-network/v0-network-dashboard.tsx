@@ -91,6 +91,8 @@ export default function V0NetworkDashboard() {
     [hasRealData, realEvents.events],
   )
 
+  const isEventMode = !!(eventStats.stats && Object.keys(eventStats.stats.source_counts).length === 0)
+
   const suricataById = useMemo(
     () => hasRealData ? buildV0SuricataMap(realEvents.events) : buildV0SuricataFromPackets(allPackets),
     [hasRealData, realEvents.events, allPackets],
@@ -281,7 +283,7 @@ export default function V0NetworkDashboard() {
                   classifications={assetClassifications.classifications}
                   apiAvailable={assetClassifications.apiAvailable}
                 />
-                <ConnectionTracker connections={connections} assetByIp={assetClassifications.byIp} />
+                <ConnectionTracker connections={connections} assetByIp={assetClassifications.byIp} isEventMode={isEventMode} />
               </div>
             )}
 
