@@ -2,18 +2,40 @@
 
 import { formatBytes, formatPacketsPerSecond } from "@/lib/v0-network/mock-data"
 import type { TrafficStats } from "@/lib/v0-network/mock-data"
+import type { EventStats } from "@/lib/types"
 import { Zap, Activity, Network, AlertTriangle } from "lucide-react"
 
 interface StatsOverviewProps {
   stats: TrafficStats
+  eventStats?: EventStats | null
 }
 
-export function StatsOverview({ stats }: StatsOverviewProps) {
+export function StatsOverview({ stats, eventStats }: StatsOverviewProps) {
   const items = [
-    { label: "Total Paquetes", value: stats.totalPackets.toLocaleString(), icon: Zap, color: "#3b82f6" },
-    { label: "Total Bytes", value: formatBytes(stats.totalBytes), icon: Activity, color: "#22c55e" },
-    { label: "Paquetes/s", value: formatPacketsPerSecond(stats.packetsPerSecond), icon: Network, color: "#a855f7" },
-    { label: "Sospechosos", value: stats.suspiciousCount.toString(), icon: AlertTriangle, color: "#ef4444" },
+    {
+      label: eventStats ? "Eventos Totales" : "Total Paquetes",
+      value: eventStats ? eventStats.total_events.toLocaleString() : stats.totalPackets.toLocaleString(),
+      icon: Zap,
+      color: "#3b82f6",
+    },
+    {
+      label: eventStats ? "Eventos Recientes" : "Total Bytes",
+      value: eventStats ? eventStats.recent_events.toLocaleString() : formatBytes(stats.totalBytes),
+      icon: Activity,
+      color: "#22c55e",
+    },
+    {
+      label: eventStats ? "Eventos/min" : "Paquetes/s",
+      value: eventStats ? formatPacketsPerSecond(eventStats.events_per_minute / 60) : formatPacketsPerSecond(stats.packetsPerSecond),
+      icon: Network,
+      color: "#a855f7",
+    },
+    {
+      label: "Sospechosos",
+      value: eventStats ? eventStats.suspicious_events.toString() : stats.suspiciousCount.toString(),
+      icon: AlertTriangle,
+      color: "#ef4444",
+    },
   ]
 
   return (

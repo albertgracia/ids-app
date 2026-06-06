@@ -62,6 +62,21 @@ export const SCENARIOS: { value: Scenario; label: string }[] = [
   { value: "malware_indicator", label: "Malware Indicator" },
 ];
 
+// Stats types
+
+export interface EventStats {
+  total_events: number;
+  recent_events: number;
+  events_per_minute: number;
+  suspicious_events: number;
+  severity_counts: Record<string, number>;
+  event_type_counts: Record<string, number>;
+  protocol_counts: Record<string, number>;
+  source_counts: Record<string, number>;
+  last_event_at: string;
+  window_seconds: number;
+}
+
 // Analytics types
 
 export type RiskLevel = "info" | "low" | "medium" | "high" | "critical";

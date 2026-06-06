@@ -1,4 +1,4 @@
-import type { CoreStatus, EventItem, RecentEventsResponse, SimulateEventsResponse, Scenario } from "./types";
+import type { CoreStatus, EventItem, EventStats, RecentEventsResponse, SimulateEventsResponse, Scenario } from "./types";
 
 const BASE_URL = "/api/core";
 
@@ -24,6 +24,12 @@ export async function getRecentEvents(limit = 50): Promise<EventItem[]> {
     `${BASE_URL}/api/v1/events/recent?limit=${limit}`
   );
   return res.items;
+}
+
+export async function getStats(windowSeconds = 300): Promise<EventStats> {
+  return fetchJSON<EventStats>(
+    `${BASE_URL}/api/v1/stats?window=${windowSeconds}`
+  );
 }
 
 export async function simulateEvents(

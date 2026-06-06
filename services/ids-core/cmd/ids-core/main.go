@@ -91,6 +91,8 @@ func main() {
 	mux.HandleFunc("/api/v1/suricata/eve/batch", suriHandler.HandleEVEBatch)
 	mux.HandleFunc("/api/internal/v1/ingest/events/unifi", uniFiHandler.HandleBatch)
 	mux.HandleFunc("/api/v1/events/stream", eventstream.SSEHandler(broadcaster))
+	statsHandler := api.NewStatsHandler(repo)
+	mux.HandleFunc("/api/v1/stats", statsHandler.HandleStats)
 	mux.HandleFunc("/api/v1/assets/classifications", assetHandler.HandleClassifications)
 	mux.HandleFunc("/api/v1/assets/classification", assetHandler.HandleIPClassification)
 

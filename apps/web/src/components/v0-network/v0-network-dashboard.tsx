@@ -26,6 +26,7 @@ import {
   useThreatDetection,
 } from "@/lib/v0-network/mock-data"
 import { useRealEvents } from "@/lib/v0-network/use-real-events"
+import { useEventStats } from "@/lib/v0-network/use-event-stats"
 import { useAssetClassifications } from "@/lib/v0-network/use-asset-classifications"
 import { useEventScoring } from "@/lib/v0-network/use-event-scoring"
 import { toV0PacketItems, buildV0Kpis, buildV0Connections, buildV0SeverityMap, buildV0SuricataMap, buildV0SuricataFromPackets, buildV0ExternalCount, buildV0MapSourceLabel } from "@/lib/v0-network/real-data-adapter"
@@ -62,6 +63,7 @@ export default function V0NetworkDashboard() {
   } = usePacketStream(300)
 
   const realEvents = useRealEvents()
+  const eventStats = useEventStats()
   const assetClassifications = useAssetClassifications()
   const eventScoring = useEventScoring(realEvents.events)
   const [activeTab, setActiveTab] = useState<Tab>("live")
@@ -144,6 +146,11 @@ export default function V0NetworkDashboard() {
                 ? `${assetClassifications.classifications.length} activos`
                 : "activos: N/A"}
             </span>
+            {eventStats.apiAvailable && eventStats.stats && (
+              <span className="v0-source-time" title="Estadísticas agregadas">
+                <RefreshCw size={10} /> Stats
+              </span>
+            )}
             <span
               className="v0-source-count"
               title="Severidad y scoring de eventos"
@@ -192,7 +199,7 @@ export default function V0NetworkDashboard() {
           </div>
         </div>
 
-        <StatsOverview stats={realStats} />
+        <StatsOverview stats={realStats} eventStats={eventStats.stats} />
 
         <div className="v0-grid-4">
           <div style={{ display: "flex", justifyContent: "center" }}>
